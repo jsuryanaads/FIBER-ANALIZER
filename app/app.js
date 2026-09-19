@@ -1,6 +1,7 @@
 import {shortestTrace,coreTrace,validateGraph} from "./graph-engine.js";
 const KEY="fiber-analyzer-flex-v3";
 const topology=["OLT_PON","OTB","JB","ODC_ODP","ODC","ODP","CUSTOMER"];
+const typeLabel=t=>({OLT_PON:"OLT / PON",OTB:"OTB",JB:"JB",ODC_ODP:"BOX ODC-ODP",ODC:"BOX ODC",ODP:"BOX ODP",CUSTOMER:"PELANGGAN"}[t]||t);
 const seed={assets:[
 {id:"oltpon-1",type:"OLT_PON",code:"OLT-PON-01",name:"OLT/PON Utama",status:"ACTIVE"},
 {id:"otb-1",type:"OTB",code:"OTB-01",name:"Optical Termination Box 01",status:"ACTIVE"},
@@ -85,7 +86,7 @@ function fillConnectionForm(x={}){
 function openConnection(x){x=x||{};$("connectionId").value=x.id||"";fillConnectionForm(x);$("connectionDialog").showModal()}
 function renderCables(){const byId=Object.fromEntries(db.assets.map(a=>[a.id,a]));$("cableList").innerHTML='<div class="cable-grid">'+(db.cables||[]).map(c=>'<div class="cable-card"><div><b>'+esc(c.code)+'</b><span class="badge">'+esc(c.fiber_count)+' CORE</span></div><div class="route"><strong>'+esc(byId[c.from]?.code||"?")+'</strong><span>→</span><strong>'+esc(byId[c.to]?.code||"?")+'</strong></div><div class="muted">'+esc(c.length_m)+' m · '+esc(c.status)+'</div><div class="cable-actions"><button data-cable-edit="'+esc(c.id)+'">Edit</button><button class="danger" data-cable-del="'+esc(c.id)+'">Hapus</button></div></div>').join("")+'</div>'}
 
-function renderStats(){const counts=Object.fromEntries(topology.map(t=>[t,db.assets.filter(a=>a.type===t).length]));$("stats").innerHTML=topology.map(t=>'<div class="stat"><b>'+counts[t]+'</b><span>'+t+'</span></div>').join("")+'<div class="stat"><b>'+db.cores.length+'</b><span>CORES</span></div>'}
+function renderStats(){const counts=Object.fromEntries(topology.map(t=>[t,db.assets.filter(a=>a.type===t).length]));$("stats").innerHTML=topology.map(t=>'<div class="stat"><b>'+counts[t]+'</b><span>'+typeLabel(t)+'</span></div>').join("")+'<div class="stat"><b>'+db.cores.length+'</b><span>CORES</span></div>'}
 function renderTopologyMap(){
   const el=$("topologyMap");if(!el)return;
   const assets=db.assets||[],byId=Object.fromEntries(assets.map(a=>[a.id,a])),edges=[];
@@ -103,7 +104,7 @@ function renderTopologyMap(){
   for(const [l,list] of groups){const x=Math.min(80+l*155,820);list.forEach((a,i)=>pos.set(a.id,{x,y:65+(i+1)*270/(list.length+1)}))}
   const color={OLT_PON:"#1c9bff",OTB:"#7bdff2",JB:"#ff9f2d",ODC_ODP:"#d58cff",ODC:"#b47cff",ODP:"#25cddd",CUSTOMER:"#ffd052",OLT:"#1c9bff",PON:"#21d79b"};
   const lines=edges.map(e=>{const a=pos.get(e.from),b=pos.get(e.to);if(!a||!b)return"";return'<line x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'" stroke="'+(e.kind==="SERVICE"?"#ffd052":"#20b9ff")+'" stroke-width="3" opacity=".9"/>'}).join("");
-  const nodes=assets.map(a=>{const p=pos.get(a.id),c=color[a.type]||"#8aa5b8";return'<g><rect x="'+(p.x-48)+'" y="'+(p.y-27)+'" width="96" height="54" rx="9" fill="#0d3450" stroke="'+c+'" stroke-width="2"/><text x="'+p.x+'" y="'+(p.y-4)+'" fill="#e7f0f8" text-anchor="middle" font-size="11" font-weight="700">'+esc(a.type)+'</text><text x="'+p.x+'" y="'+(p.y+13)+'" fill="#a8bfd0" text-anchor="middle" font-size="9">'+esc(a.code)+'</text></g>'}).join("");
+  const nodes=assets.map(a=>{const p=pos.get(a.id),c=color[a.type]||"#8aa5b8";return'<g><rect x="'+(p.x-48)+'" y="'+(p.y-27)+'" width="96" height="54" rx="9" fill="#0d3450" stroke="'+c+'" stroke-width="2"/><text x="'+p.x+'" y="'+(p.y-4)+'" fill="#e7f0f8" text-anchor="middle" font-size="11" font-weight="700">'+esc(typeLabel(a.type))+'</text><text x="'+p.x+'" y="'+(p.y+13)+'" fill="#a8bfd0" text-anchor="middle" font-size="9">'+esc(a.code)+'</text></g>'}).join("");
   const legend='<g transform="translate(14 350)"><rect width="250" height="45" rx="7" fill="#071321" fill-opacity=".94" stroke="#345269"/><text x="10" y="16" fill="#e7f0f8" font-size="10" font-weight="700">Topology Aktif</text><text x="10" y="32" fill="#9db3c5" font-size="9">'+(db.cables||[]).length+' kabel · '+(db.links||[]).length+' service link · '+assets.length+' node</text></g>';
   el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet">'+lines+nodes+legend+'</svg>';
 }
@@ -117,7 +118,7 @@ function renderCondition(){
   const customers=(db.assets||[]).filter(x=>x.type==="CUSTOMER"),active=customers.filter(x=>x.status==="ACTIVE").length;
   $("serviceStatus").innerHTML='<div class="service"><span>🟢 Pelanggan Aktif</span><b>'+active+'</b></div><div class="service"><span>🔴 Pelanggan Nonaktif</span><b>'+(customers.length-active)+'</b></div><div class="service"><span>⚠ Gangguan Aktif</span><b>0</b></div><div class="service"><span>🔧 Work Order Open</span><b>0</b></div>';
 }
-function renderAssets(){const q=$("search").value.toLowerCase();const a=db.assets.filter(x=>(x.code+" "+x.name+" "+x.type).toLowerCase().includes(q));$("assets").innerHTML=a.map(x=>'<div class="row"><div><b>'+esc(x.code)+'</b><div class="muted">'+esc(x.type)+' · '+esc(x.name)+'</div></div><span class="badge">'+esc(x.status)+'</span><div><button data-edit="'+esc(x.id)+'">Edit</button> <button class="danger" data-del="'+esc(x.id)+'">Hapus</button></div></div>').join("")||'<p class="muted">Tidak ada asset.</p>'}
+function renderAssets(){const q=$("search").value.toLowerCase();const a=db.assets.filter(x=>(x.code+" "+x.name+" "+x.type).toLowerCase().includes(q));$("assets").innerHTML=a.map(x=>'<div class="row"><div><b>'+esc(x.code)+'</b><div class="muted">'+esc(typeLabel(x.type))+' · '+esc(x.name)+'</div></div><span class="badge">'+esc(x.status)+'</span><div><button data-edit="'+esc(x.id)+'">Edit</button> <button class="danger" data-del="'+esc(x.id)+'">Hapus</button></div></div>').join("")||'<p class="muted">Tidak ada asset.</p>'}
 function renderCustomers(){$("customerSelect").innerHTML=db.assets.filter(x=>x.type==="CUSTOMER").map(x=>'<option value="'+esc(x.id)+'">'+esc(x.code)+' — '+esc(x.name)+'</option>').join("")}
 function renderCores(){const cables=Object.fromEntries(db.cables.map(c=>[c.id,c]));$("cores").innerHTML='<table class="table"><thead><tr><th>Cable</th><th>Core</th><th>Status</th><th>Length</th></tr></thead><tbody>'+db.cores.map(c=>'<tr><td>'+esc(cables[c.cable_id]?.code||"-")+'</td><td>'+c.core_number+'</td><td><span class="badge">'+esc(c.status)+'</span></td><td>'+esc(cables[c.cable_id]?.length_m||"-")+' m</td></tr>').join("")+'</tbody></table>'}
 function openAsset(a){a=a||{};$("assetId").value=a.id||"";$("assetType").value=a.type||"OLT";$("assetCode").value=a.code||"";$("assetName").value=a.name||"";$("assetStatus").value=a.status||"ACTIVE";$("dialogTitle").textContent=a.id?"Edit Asset":"Tambah Asset";$("assetDialog").showModal()}
@@ -176,7 +177,7 @@ $("addSplitter").onclick=()=>openSplitter();
 $("splitterNode").onchange=()=>{
   const type=db.assets.find(a=>a.id===$("splitterNode").value)?.type;
   if(type==="ODP"){$("splitterRatio").value="1:8";$("splitterRatio").disabled=true}else $("splitterRatio").disabled=false;
-  $("splitterHint").textContent=type==="ODP"?"ODP hanya menggunakan splitter 1:8.":"ODC-ODP dan ODC dapat memakai beberapa splitter.";
+  $("splitterHint").textContent=type==="ODP"?"ODP hanya menggunakan splitter 1:8.":"BOX ODC-ODP dan BOX ODC dapat memakai beberapa splitter.";
 };
 $("splitterForm").onsubmit=e=>{
   e.preventDefault();
