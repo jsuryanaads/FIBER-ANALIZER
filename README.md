@@ -1,99 +1,69 @@
 # WebVIEW-Generator
 
-Standalone Android WebView application generator.
+Desktop-first generator untuk membuat **aplikasi Android WebView** dari sebuah URL.
 
-This repository is independent from WeFinance and WeMONEY. It does not import their source code, database, backend configuration, or AI configuration.
+Generator berjalan sebagai aplikasi desktop Windows/Linux/macOS, sedangkan hasil akhirnya tetap:
+- Android Studio project
+- Debug APK
+- Release APK
+- Release AAB
+- Project ZIP
 
-## What it does
+Project ini berdiri sendiri dan tidak bergantung pada source code, database, backend, atau AI configuration milik WeFinance maupun WeMONEY.
 
-WebVIEW-Generator turns a website URL into a configurable Android Studio WebView project.
-
-### Generator UI
-
-Launch the desktop generator:
+## Desktop Generator
 
 ```bash
 python generator/generator_app.py
 ```
 
-The UI provides:
+GUI menyediakan App Name, Package Name, Website URL, Version, Version Code, warna, splash, PNG launcher icon, JavaScript, File Upload, Pull-to-Refresh, External Links, Save/Load JSON, Generate Project, Build Debug APK, Build Release APK, Build Release AAB, Export Project ZIP, dan build console.
 
-- App Name
-- Android Package Name
-- Website URL
-- Version / Version Code
-- Primary Color
-- Splash Color
-- Dark Mode
-- Optional App Icon selection
-- JavaScript toggle
-- File Upload toggle
-- Pull-to-Refresh toggle
-- External Link toggle
-- Save configuration as JSON
-- Generate Android project
-
-### CLI
-
-The generator can also be used without the UI:
-
-```bash
-python generator/generate.py \
-  --url "https://example.com" \
-  --name "Example App" \
-  --package "com.example.app"
-```
-
-Generated projects are written to `generated/<slug>`.
-
-## Android template
-
-The generated application includes:
-
-- Android WebView
-- JavaScript
-- DOM Storage
-- Cookies
-- File upload
-- Back navigation
-- Pull-to-refresh
-- HTTP/HTTPS navigation
-- External scheme handling
-- Lifecycle cleanup
-- Android API 24+ support
-
-## CI/CD
-
-GitHub Actions validates the generator, creates a sample project, builds a debug APK, and uploads the APK as an artifact.
-
-Workflow:
+### Alur
 
 ```
-.github/workflows/build.yml
+Desktop Generator
+      |
+      v
+Android Project
+      |
+      +--> Debug APK
+      +--> Release APK
+      +--> Release AAB
+      +--> Project ZIP
 ```
 
-## Independence
-
-WebVIEW-Generator is a standalone tool.
-
-```
-WebVIEW-Generator
-       |
-       +-- Website A -> APK
-       +-- Website B -> APK
-       +-- WeFinance -> APK
-       +-- WeMONEY -> APK
-       +-- Any compatible website -> APK
-```
-
-WeFinance and WeMONEY are targets that may be wrapped by URL; they are not dependencies of this repository.
+Desktop GUI bukan aplikasi target. Ia hanya mengontrol generator dan Gradle/Android SDK.
 
 ## Requirements
 
 - Python 3.10+
-- Android Studio / Android SDK
 - JDK 17
-- Gradle is installed automatically by the GitHub Actions workflow; local Android builds use the generated Gradle wrapper.
+- Android SDK
+- Gradle (opsional jika project belum mempunyai wrapper)
+
+## Build Windows EXE
+
+```bash
+pip install -r requirements-desktop.txt
+pyinstaller --noconfirm --clean webview-generator.spec
+```
+
+Output: `dist/WebVIEW-Generator/`
+
+## CLI
+
+```bash
+python generator/generate.py --url "https://example.com" --name "Example App" --package "com.example.app"
+```
+
+## Independence
+
+WeFinance dan WeMONEY hanya dapat menjadi target URL; keduanya bukan dependency.
+
+## CI
+
+GitHub Actions memvalidasi generator Android dan workflow desktop membuat paket Windows melalui PyInstaller.
 
 ## License
 
