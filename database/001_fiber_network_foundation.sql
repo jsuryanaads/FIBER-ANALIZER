@@ -8,7 +8,7 @@ create type asset_status as enum ('ACTIVE','INACTIVE','MAINTENANCE','RETIRED');
 create type core_status as enum ('AVAILABLE','RESERVED','IN_USE','DAMAGED','RETIRED');
 create type cable_status as enum ('PLANNED','ACTIVE','DAMAGED','RETIRED');
 create type customer_status as enum ('ACTIVE','SUSPENDED','DISCONNECTED','PROSPECT');
-create type node_type as enum ('OLT_PON','OTB','JB','ODC_ODP','ODC','ODP','CUSTOMER');
+create type node_type as enum ('OLT','OTB','JB','ODC_ODP','ODC','ODP','CUSTOMER');
 create type port_status as enum ('AVAILABLE','USED','RESERVED','FAULTY','RETIRED');
 
 create table locations (
@@ -54,7 +54,7 @@ create table olt_ports (
   check (capacity is null or capacity > 0)
 );
 
-/* PON table intentionally removed: OLT ports are the source endpoints. */
+/* OLT ports replace the former PON layer: each OLT port is an independent source endpoint. */
 /* create table olt_ports (
   id uuid primary key default gen_random_uuid(),
   olt_id uuid not null references olts(id) on delete restrict,
