@@ -2,43 +2,40 @@
 
 Standalone Android WebView application generator.
 
-This repository is independent from WeFinance and WeMONEY. It contains a reusable Android WebView template and a generator CLI that creates a configured Android project from a website URL.
+This repository is independent from WeFinance and WeMONEY. It does not import their source code, database, backend configuration, or AI configuration.
 
-## Features
+## What it does
 
-- Website URL configuration
-- App name and package name
-- WebViewClient navigation handling
-- JavaScript support
-- File upload support
-- External URL handling
-- Back navigation
-- Pull-to-refresh
-- Network error screen
-- Configurable status/navigation bar colors
-- Android project generation
-- No dependency on WeFinance or WeMONEY
+WebVIEW-Generator turns a website URL into a configurable Android Studio WebView project.
 
-## Architecture
+### Generator UI
 
-```
-WebVIEW-Generator
-├── generator/              # Standalone project generator
-├── template/               # Android WebView template
-├── generated/               # Local generated projects (gitignored)
-└── README.md
+Launch the desktop generator:
+
+```bash
+python generator/generator_app.py
 ```
 
-The generated application is a normal Android Studio project. The generator does not embed or import any source code from the website being wrapped.
+The UI provides:
 
-## Quick start
+- App Name
+- Android Package Name
+- Website URL
+- Version / Version Code
+- Primary Color
+- Splash Color
+- Dark Mode
+- Optional App Icon selection
+- JavaScript toggle
+- File Upload toggle
+- Pull-to-Refresh toggle
+- External Link toggle
+- Save configuration as JSON
+- Generate Android project
 
-Requirements:
-- Python 3.10+
-- Android Studio / Android SDK
-- JDK 17
+### CLI
 
-Run:
+The generator can also be used without the UI:
 
 ```bash
 python generator/generate.py \
@@ -47,13 +44,56 @@ python generator/generate.py \
   --package "com.example.app"
 ```
 
-The generated project will be placed under `generated/<slug>`.
+Generated projects are written to `generated/<slug>`.
 
-Then open that directory in Android Studio and build the APK.
+## Android template
 
-## Security model
+The generated application includes:
 
-Only the configured website is loaded by the generated app. JavaScript is enabled because modern web applications commonly require it. Do not add a JavaScript bridge unless it is explicitly required; Android documents that JavaScript interfaces can create security risks when untrusted web content is involved.
+- Android WebView
+- JavaScript
+- DOM Storage
+- Cookies
+- File upload
+- Back navigation
+- Pull-to-refresh
+- HTTP/HTTPS navigation
+- External scheme handling
+- Lifecycle cleanup
+- Android API 24+ support
+
+## CI/CD
+
+GitHub Actions validates the generator, creates a sample project, builds a debug APK, and uploads the APK as an artifact.
+
+Workflow:
+
+```
+.github/workflows/build.yml
+```
+
+## Independence
+
+WebVIEW-Generator is a standalone tool.
+
+```
+WebVIEW-Generator
+       |
+       +-- Website A -> APK
+       +-- Website B -> APK
+       +-- WeFinance -> APK
+       +-- WeMONEY -> APK
+       +-- Any compatible website -> APK
+```
+
+WeFinance and WeMONEY are targets that may be wrapped by URL; they are not dependencies of this repository.
+
+## Requirements
+
+- Python 3.10+
+- Android Studio / Android SDK
+- JDK 17
+- Gradle is installed automatically by the GitHub Actions workflow; local Android builds use the generated Gradle wrapper.
 
 ## License
 
