@@ -3,13 +3,14 @@ const KEY="fiber-analyzer-flex-v1";
 const topology=["OLT","PON","JB","ODC","ODP","CUSTOMER"];
 const seed={assets:[
 {id:"olt-1",type:"OLT",code:"OLT-01",name:"OLT Utama",status:"ACTIVE"},
+{id:"pon-1",type:"PON",code:"PON-01",name:"PON Port 01",status:"ACTIVE"},
 {id:"jb-1",type:"JB",code:"JB-01",name:"Joint Box 01",status:"ACTIVE"},
 {id:"jb-2",type:"JB",code:"JB-02",name:"Joint Box 02",status:"ACTIVE"},
 {id:"jb-3",type:"JB",code:"JB-03",name:"Joint Box 03",status:"ACTIVE"},
 {id:"odc-1",type:"ODC",code:"ODC-01",name:"ODC Utama",status:"ACTIVE"},
 {id:"odp-1",type:"ODP",code:"ODP-01",name:"ODP 01",status:"ACTIVE"},
 {id:"c-1",type:"CUSTOMER",code:"CUST-001",name:"Pelanggan Demo",status:"ACTIVE"}],
-links:[{id:"svc-1",from:"odp-1",to:"c-1",kind:"SERVICE"}],splices:[],
+links:[{id:"svc-1",from:"odp-1",to:"c-1",kind:"SERVICE"}],logicalLinks:[{id:"logical-olt-pon",from:"olt-1",to:"pon-1",kind:"PON"}],splices:[],
 cables:[
 {id:"cab-olt-jb1",code:"KBL-OLT-JB01-24C",fiber_count:24,length_m:1000,from:"olt-1",to:"jb-1",status:"ACTIVE"},
 {id:"cab-jb1-jb2",code:"KBL-JB01-JB02-24C",fiber_count:24,length_m:600,from:"jb-1",to:"jb-2",status:"ACTIVE"},
@@ -43,7 +44,7 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&
 function options(list,value,empty="— Tidak ada —"){return '<option value="">'+empty+'</option>'+list.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===value?"selected":"")+'>'+esc(x.code||x.name||x.id)+'</option>').join("")}
 function fillCableInputs(a={}){const cables=db.cables||[],incoming=$( "assetIncomingCable"),outgoing=$( "assetOutgoingCable");if(!incoming)return;incoming.innerHTML=options(cables,a.incomingCableId);outgoing.innerHTML=options(cables,a.outgoingCableId);fillCore("assetIncomingCore",a.incomingCoreId,a.incomingCableId);fillCore("assetOutgoingCore",a.outgoingCoreId,a.outgoingCableId)}
 function fillCore(id,value,cableId){const el=$(id);if(!el)return;const cores=(db.cores||[]).filter(c=>!cableId||c.cable_id===cableId);el.innerHTML=options(cores,value,"— Tidak ada core —");}
-function render(){renderStats();renderAssets();renderCustomers();renderCores();renderCables();renderConnections()}
+function render(){renderStats();renderTopologyMap();renderCondition();renderAssets();renderCustomers();renderCores();renderCables();renderConnections()}
 function nodeOptions(value=""){return '<option value="">— Pilih node —</option>'+db.assets.filter(a=>a.type!=="CUSTOMER").map(a=>'<option value="'+esc(a.id)+'" '+(a.id===value?"selected":"")+'>'+esc(a.code)+' — '+esc(a.name)+'</option>').join("")}
 function openCable(c){c=c||{};$("cableId").value=c.id||"";$("cableCode").value=c.code||"";$("cableFrom").innerHTML=nodeOptions(c.from);$("cableTo").innerHTML=nodeOptions(c.to);$("cableFiberCount").value=c.fiber_count||12;$("cableLength").value=c.length_m||0;$("cableStatus").value=c.status||"ACTIVE";$("cableDialog").showModal()}
 function renderConnections(){const byId=Object.fromEntries(db.assets.map(a=>[a.id,a]));const cables=Object.fromEntries((db.cables||[]).map(c=>[c.id,c]));const cores=Object.fromEntries((db.cores||[]).map(c=>[c.id,c]));$("connectionList").innerHTML=(db.coreConnections||[]).map(x=>'<div class="cable-card"><div><b>'+esc(byId[x.nodeId]?.code||x.nodeId)+'</b><span class="badge">'+esc(x.connectionType||"SPLICE")+'</span></div><div class="muted">'+esc(cables[x.inputCableId]?.code||"?")+': Core '+esc(cores[x.inputCoreId]?.core_number||"?")+' → '+esc(cables[x.outputCableId]?.code||"?")+': Core '+esc(cores[x.outputCoreId]?.core_number||"?")+'</div><div class="cable-actions"><button data-conn-edit="'+esc(x.id)+'">Edit</button><button class="danger" data-conn-del="'+esc(x.id)+'">Hapus</button></div></div>').join("")||'<p class="muted">Belum ada mapping core.</p>'}
@@ -52,7 +53,38 @@ function openConnection(x){x=x||{};$("connectionId").value=x.id||"";fillConnecti
 function renderCables(){const byId=Object.fromEntries(db.assets.map(a=>[a.id,a]));$("cableList").innerHTML='<div class="cable-grid">'+(db.cables||[]).map(c=>'<div class="cable-card"><div><b>'+esc(c.code)+'</b><span class="badge">'+esc(c.fiber_count)+' CORE</span></div><div class="route"><strong>'+esc(byId[c.from]?.code||"?")+'</strong><span>→</span><strong>'+esc(byId[c.to]?.code||"?")+'</strong></div><div class="muted">'+esc(c.length_m)+' m · '+esc(c.status)+'</div><div class="cable-actions"><button data-cable-edit="'+esc(c.id)+'">Edit</button><button class="danger" data-cable-del="'+esc(c.id)+'">Hapus</button></div></div>').join("")+'</div>'}
 
 function renderStats(){const counts=Object.fromEntries(topology.map(t=>[t,db.assets.filter(a=>a.type===t).length]));$("stats").innerHTML=topology.map(t=>'<div class="stat"><b>'+counts[t]+'</b><span>'+t+'</span></div>').join("")+'<div class="stat"><b>'+db.cores.length+'</b><span>CORES</span></div>'}
-function renderAssets(){const q=$("search").value.toLowerCase();const a=db.assets.filter(x=>(x.code+" "+x.name+" "+x.type).toLowerCase().includes(q));$("assets").innerHTML=a.map(x=>'<div class="row"><div><b>'+esc(x.code)+'</b><div class="muted">'+esc(x.type)+' · '+esc(x.name)+'</div><div class="muted">IN: '+esc((db.cables.find(c=>c.id===x.incomingCableId)||{}).code||"—")+' · OUT: '+esc((db.cables.find(c=>c.id===x.outgoingCableId)||{}).code||"—")+'</div></div><span class="badge">'+esc(x.status)+'</span><div><button data-edit="'+esc(x.id)+'">Edit</button> <button class="danger" data-del="'+esc(x.id)+'">Hapus</button></div></div>').join("")||'<p class="muted">Tidak ada asset.</p>'}
+function renderTopologyMap(){
+  const el=$("topologyMap");if(!el)return;
+  const assets=db.assets||[],byId=Object.fromEntries(assets.map(a=>[a.id,a])),edges=[];
+  for(const c of db.cables||[])if(byId[c.from]&&byId[c.to])edges.push({from:c.from,to:c.to,kind:"CABLE"});
+  for(const l of db.links||[])if(byId[l.from]&&byId[l.to])edges.push({from:l.from,to:l.to,kind:l.kind||"LINK"});
+  const adjacency=new Map(assets.map(a=>[a.id,[]]));
+  edges.forEach(e=>{adjacency.get(e.from)?.push(e.to);adjacency.get(e.to)?.push(e.from)});
+  const root=assets.find(a=>a.type==="OLT")?.id,level=new Map(),queue=[];
+  if(root){level.set(root,0);queue.push(root)}
+  while(queue.length){const id=queue.shift();for(const n of adjacency.get(id)||[]){if(!level.has(n)){level.set(n,(level.get(id)||0)+1);queue.push(n)}}}
+  const maxLevel=Math.max(0,...level.values());
+  assets.filter(a=>!level.has(a.id)).forEach((a,i)=>level.set(a.id,maxLevel+1+(i?0:0)));
+  const groups=new Map();assets.forEach(a=>{const l=level.get(a.id)||0;if(!groups.has(l))groups.set(l,[]);groups.get(l).push(a)});
+  const pos=new Map(),W=900,H=410;
+  for(const [l,list] of groups){const x=Math.min(80+l*155,820);list.forEach((a,i)=>pos.set(a.id,{x,y:65+(i+1)*270/(list.length+1)}))}
+  const color={OLT:"#1c9bff",PON:"#21d79b",JB:"#ff9f2d",ODC:"#b47cff",ODP:"#25cddd",CUSTOMER:"#ffd052"};
+  const lines=edges.map(e=>{const a=pos.get(e.from),b=pos.get(e.to);if(!a||!b)return"";return'<line x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'" stroke="'+(e.kind==="SERVICE"?"#ffd052":"#20b9ff")+'" stroke-width="3" opacity=".9"/>'}).join("");
+  const nodes=assets.map(a=>{const p=pos.get(a.id),c=color[a.type]||"#8aa5b8";return'<g><rect x="'+(p.x-48)+'" y="'+(p.y-27)+'" width="96" height="54" rx="9" fill="#0d3450" stroke="'+c+'" stroke-width="2"/><text x="'+p.x+'" y="'+(p.y-4)+'" fill="#e7f0f8" text-anchor="middle" font-size="11" font-weight="700">'+esc(a.type)+'</text><text x="'+p.x+'" y="'+(p.y+13)+'" fill="#a8bfd0" text-anchor="middle" font-size="9">'+esc(a.code)+'</text></g>'}).join("");
+  const legend='<g transform="translate(14 350)"><rect width="250" height="45" rx="7" fill="#071321" fill-opacity=".94" stroke="#345269"/><text x="10" y="16" fill="#e7f0f8" font-size="10" font-weight="700">Topology Aktif</text><text x="10" y="32" fill="#9db3c5" font-size="9">'+(db.cables||[]).length+' kabel · '+(db.links||[]).length+' service link · '+assets.length+' node</text></g>';
+  el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet">'+lines+nodes+legend+'</svg>';
+}
+function renderCondition(){
+  const cores=db.cores||[],total=cores.length,counts={IN_USE:0,AVAILABLE:0,RESERVED:0,DAMAGED:0};
+  cores.forEach(c=>{if(counts[c.status]!==undefined)counts[c.status]++;else counts.AVAILABLE++});
+  const pct=n=>total?((n/total)*100).toFixed(1):"0.0",used=pct(counts.IN_USE),available=pct(counts.AVAILABLE),reserved=pct(counts.RESERVED),damaged=pct(counts.DAMAGED);
+  const p1=Number(used),p2=p1+Number(available),p3=p2+Number(reserved);
+  const bg=total?"conic-gradient(#18bd82 0 "+p1+"%,#1688ff "+p1+"% "+p2+"%,#ff9d2d "+p2+"% "+p3+"%,#ef4c58 "+p3+"% 100%)":"#18374f";
+  $("coreCondition").innerHTML='<div class="donut" style="background:'+bg+'"><div><b>'+total+'</b><span>Total Core</span></div></div><div class="legend-list"><span><i class="green"></i>Core Terpakai <b>'+used+'%</b></span><span><i class="blue"></i>Core Tersedia <b>'+available+'%</b></span><span><i class="orange"></i>Cadangan <b>'+reserved+'%</b></span><span><i class="red"></i>Core Rusak <b>'+damaged+'%</b></span></div>';
+  const customers=(db.assets||[]).filter(x=>x.type==="CUSTOMER"),active=customers.filter(x=>x.status==="ACTIVE").length;
+  $("serviceStatus").innerHTML='<div class="service"><span>🟢 Pelanggan Aktif</span><b>'+active+'</b></div><div class="service"><span>🔴 Pelanggan Nonaktif</span><b>'+(customers.length-active)+'</b></div><div class="service"><span>⚠ Gangguan Aktif</span><b>0</b></div><div class="service"><span>🔧 Work Order Open</span><b>0</b></div>';
+}
+function renderAssets(){const q=$("search").value.toLowerCase();const a=db.assets.filter(x=>(x.code+" "+x.name+" "+x.type).toLowerCase().includes(q));$("assets").innerHTML=a.map(x=>'<div class="row"><div><b>'+esc(x.code)+'</b><div class="muted">'+esc(x.type)+' · '+esc(x.name)+'</div></div><span class="badge">'+esc(x.status)+'</span><div><button data-edit="'+esc(x.id)+'">Edit</button> <button class="danger" data-del="'+esc(x.id)+'">Hapus</button></div></div>').join("")||'<p class="muted">Tidak ada asset.</p>'}
 function renderCustomers(){$("customerSelect").innerHTML=db.assets.filter(x=>x.type==="CUSTOMER").map(x=>'<option value="'+esc(x.id)+'">'+esc(x.code)+' — '+esc(x.name)+'</option>').join("")}
 function renderCores(){const cables=Object.fromEntries(db.cables.map(c=>[c.id,c]));$("cores").innerHTML='<table class="table"><thead><tr><th>Cable</th><th>Core</th><th>Status</th><th>Length</th></tr></thead><tbody>'+db.cores.map(c=>'<tr><td>'+esc(cables[c.cable_id]?.code||"-")+'</td><td>'+c.core_number+'</td><td><span class="badge">'+esc(c.status)+'</span></td><td>'+esc(cables[c.cable_id]?.length_m||"-")+' m</td></tr>').join("")+'</tbody></table>'}
 function openAsset(a){a=a||{};$("assetId").value=a.id||"";$("assetType").value=a.type||"OLT";$("assetCode").value=a.code||"";$("assetName").value=a.name||"";$("assetStatus").value=a.status||"ACTIVE";$("dialogTitle").textContent=a.id?"Edit Asset":"Tambah Asset";$("assetDialog").showModal()}
