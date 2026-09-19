@@ -15,6 +15,7 @@ const seed={assets:[
 links:[{id:"svc-1",from:"odp-1",to:"c-1",kind:"SERVICE"}],
 logicalLinks:[],
 splices:[],
+splitterOutputs:[{id:"so-1",nodeId:"odc-odp-1",splitterId:"sp-odcodp-3",outputPort:1,cableId:"cab-odcodp-odc",coreId:"core-9"}],
 splitterConnections:[{id:"sc-1",nodeId:"odc-odp-1",fromSplitterId:"sp-odcodp-1",fromPort:1,toSplitterId:"sp-odcodp-2",toPort:"INPUT"},{id:"sc-2",nodeId:"odc-odp-1",fromSplitterId:"sp-odcodp-2",fromPort:4,toSplitterId:"sp-odcodp-3",toPort:"INPUT"}],
 cables:[
 {id:"cab-olt1p1-otb",code:"KBL-OLT01-P1-OTB01-24C",fiber_count:24,length_m:900,from:"olt-1",to:"otb-1",fromPort:1,toPort:1,status:"ACTIVE"},
@@ -24,6 +25,7 @@ cables:[
 {id:"cab-jb2-odcodp",code:"KBL-JB02-ODC-ODP01-48C",fiber_count:48,length_m:700,from:"jb-2",to:"odc-odp-1",status:"ACTIVE"},
 {id:"cab-jb3-odc",code:"KBL-JB03-ODC01-24C",fiber_count:24,length_m:650,from:"jb-3",to:"odc-1",status:"ACTIVE"},
 {id:"cab-odcodp-jb2",code:"KBL-ODC-ODP01-JB02-12C",fiber_count:12,length_m:300,from:"odc-odp-1",to:"jb-2",status:"ACTIVE"},
+{id:"cab-odcodp-odc",code:"KBL-ODC-ODP01-ODC01-12C",fiber_count:12,length_m:80,from:"odc-odp-1",to:"odc-1",status:"ACTIVE"},
 {id:"cab-odc-odp",code:"KBL-ODC01-ODP01-12C",fiber_count:12,length_m:300,from:"odc-1",to:"odp-1",status:"ACTIVE"}],
 cores:[
 {id:"core-1",cable_id:"cab-oltpon-otb",core_number:1,status:"IN_USE"},
@@ -33,8 +35,9 @@ cores:[
 {id:"core-5",cable_id:"cab-jb2-odcodp",core_number:7,status:"IN_USE"},
 {id:"core-6",cable_id:"cab-jb3-odc",core_number:4,status:"IN_USE"},
 {id:"core-7",cable_id:"cab-odcodp-jb2",core_number:3,status:"IN_USE"},
+{id:"core-9",cable_id:"cab-odcodp-odc",core_number:1,status:"IN_USE"},
 {id:"core-8",cable_id:"cab-odc-odp",core_number:2,status:"IN_USE"}],
-splitters:[{id:"sp-odcodp-1",nodeId:"odc-odp-1",ratio:"1:4",stage:1,inputType:"CORE",inputCableId:"cab-jb2-odcodp",inputCoreId:"core-5"},{id:"sp-odcodp-2",nodeId:"odc-odp-1",ratio:"1:4",stage:2,inputType:"SPLITTER",inputSplitterId:"sp-odcodp-1",inputPort:1},{id:"sp-odcodp-3",nodeId:"odc-odp-1",ratio:"1:4",stage:3,inputType:"SPLITTER",inputSplitterId:"sp-odcodp-2",inputPort:4},{id:"sp-odc-1",nodeId:"odc-1",ratio:"1:4",stage:1},{id:"sp-odc-2",nodeId:"odc-1",ratio:"1:4",stage:2},{id:"sp-odp-1",nodeId:"odp-1",ratio:"1:8",stage:1}],
+splitters:[{id:"sp-odcodp-1",nodeId:"odc-odp-1",ratio:"1:4",stage:1,inputType:"CORE",inputCableId:"cab-jb2-odcodp",inputCoreId:"core-5"},{id:"sp-odcodp-2",nodeId:"odc-odp-1",ratio:"1:4",stage:2,inputType:"SPLITTER",inputSplitterId:"sp-odcodp-1",inputPort:1,inputCoreId:"core-5"},{id:"sp-odcodp-3",nodeId:"odc-odp-1",ratio:"1:4",stage:3,inputType:"SPLITTER",inputSplitterId:"sp-odcodp-2",inputPort:4,inputCoreId:"core-5"},{id:"sp-odc-1",nodeId:"odc-1",ratio:"1:4",stage:1},{id:"sp-odc-2",nodeId:"odc-1",ratio:"1:4",stage:2},{id:"sp-odp-1",nodeId:"odp-1",ratio:"1:8",stage:1}],
 coreConnections:[
 {id:"cc-1",nodeId:"otb-1",inputCableId:"cab-oltpon-otb",inputCoreId:"core-1",outputCableId:"cab-otb-jb1",outputCoreId:"core-2",connectionType:"SPLICE",status:"ACTIVE"},
 {id:"cc-2",nodeId:"jb-1",inputCableId:"cab-otb-jb1",inputCoreId:"core-2",outputCableId:"cab-jb1-jb2",outputCoreId:"core-3",connectionType:"SPLICE",status:"ACTIVE"},
@@ -45,7 +48,7 @@ coreConnections:[
 {id:"cc-7",nodeId:"odc-1",inputCableId:"cab-jb3-odc",inputCoreId:"core-6",outputCableId:"cab-odc-odp",outputCoreId:"core-8",connectionType:"SPLICE",status:"ACTIVE"}
 ]};
 let db=JSON.parse(localStorage.getItem(KEY)||"null")||structuredClone(seed);
-db.assets=db.assets||[];db.assets.forEach(a=>{if(a.type==="OLT_PON")a.type="OLT";a.port_count=Math.max(1,Number(a.port_count)||(a.type==="OLT"?16:1));if(a.type==="OLT")a.olt_ports=Array.from({length:a.port_count},(_,i)=>({port_number:i+1,code:`${a.code}-P${i+1}`,status:"AVAILABLE"}))});db.links=db.links||[];db.cables=db.cables||[];db.cables.forEach(c=>{c.fromPort=Math.max(1,Number(c.fromPort)||1);c.toPort=Math.max(1,Number(c.toPort)||1)});db.cores=db.cores||[];db.coreConnections=db.coreConnections||[];db.splitters=db.splitters||[];db.splitterConnections=db.splitterConnections||[];
+db.assets=db.assets||[];db.assets.forEach(a=>{if(a.type==="OLT_PON")a.type="OLT";a.port_count=Math.max(1,Number(a.port_count)||(a.type==="OLT"?16:1));if(a.type==="OLT")a.olt_ports=Array.from({length:a.port_count},(_,i)=>({port_number:i+1,code:`${a.code}-P${i+1}`,status:"AVAILABLE"}))});db.links=db.links||[];db.cables=db.cables||[];db.cables.forEach(c=>{c.fromPort=Math.max(1,Number(c.fromPort)||1);c.toPort=Math.max(1,Number(c.toPort)||1)});db.cores=db.cores||[];db.coreConnections=db.coreConnections||[];db.splitters=db.splitters||[];db.splitterConnections=db.splitterConnections||[];db.splitterOutputs=db.splitterOutputs||[];
 function normalizeDb(){
   const existing=new Map(db.cores.map(c=>[(c.cable_id||"")+":"+c.core_number,c]));
   for(const cable of db.cables){
@@ -58,9 +61,10 @@ function normalizeDb(){
   db.splitters=(db.splitters||[]).filter(s=>db.assets.some(a=>a.id===s.nodeId)&&["ODC_ODP","ODC","ODP"].includes(db.assets.find(a=>a.id===s.nodeId)?.type)&&["1:2","1:4","1:8","1:16","1:32","1:64"].includes(s.ratio));
   db.splitters.forEach(s=>{if(db.assets.find(a=>a.id===s.nodeId)?.type==="ODP")s.ratio="1:8";s.stage=Math.max(1,Number(s.stage)||1)});
   const splitterIds=new Set(db.splitters.map(s=>s.id));
-  db.splitterConnections=db.splitterConnections.filter(x=>splitterIds.has(x.fromSplitterId)&&splitterIds.has(x.toSplitterId)&&db.assets.some(a=>a.id===x.nodeId));
   const cableIds=new Set(db.cables.map(c=>c.id));
   const coreIds=new Set(db.cores.map(c=>c.id));
+  db.splitterOutputs=db.splitterOutputs.filter(x=>splitterIds.has(x.splitterId)&&cableIds.has(x.cableId)&&coreIds.has(x.coreId));
+  db.splitterConnections=db.splitterConnections.filter(x=>splitterIds.has(x.fromSplitterId)&&splitterIds.has(x.toSplitterId)&&db.assets.some(a=>a.id===x.nodeId));
   db.coreConnections=db.coreConnections.filter(x=>cableIds.has(x.inputCableId)&&cableIds.has(x.outputCableId)&&coreIds.has(x.inputCoreId)&&coreIds.has(x.outputCoreId)&&db.assets.some(a=>a.id===x.nodeId));
 }
 function normalizeOltPorts(){for(const a of db.assets.filter(x=>x.type==="OLT")){const n=Math.max(1,Number(a.port_count)||16);a.port_count=n;a.olt_ports=Array.from({length:n},(_,i)=>a.olt_ports?.[i]||({port_number:i+1,code:`${a.code}-P${i+1}`,status:"AVAILABLE"}))}}\nnormalizeOltPorts();\nnormalizeDb();
