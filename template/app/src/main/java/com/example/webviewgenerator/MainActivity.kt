@@ -11,7 +11,9 @@ import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
@@ -27,12 +29,14 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
 
         refresh = SwipeRefreshLayout(this)
         webView = WebView(this)
 
         refresh.addView(webView)
+        refresh.isEnabled = getBoolean(R.bool.feature_pull_refresh)
         setContentView(refresh)
 
         configureWebView()
@@ -42,6 +46,17 @@ class MainActivity : AppCompatActivity() {
         } else {
             webView.restoreState(savedInstanceState)
         }
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (webView.canGoBack()) {
+                    webView.goBack()
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -49,7 +64,7 @@ class MainActivity : AppCompatActivity() {
         CookieManager.getInstance().setAcceptCookie(true)
 
         webView.settings.apply {
-            javaScriptEnabled = true
+            javaScriptEnabled = getBoolean(R.bool.feature_javascript)
             domStorageEnabled = true
             databaseEnabled = true
             allowFileAccess = false
@@ -63,7 +78,11 @@ class MainActivity : AppCompatActivity() {
         if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
             WebSettingsCompat.setForceDark(
                 webView.settings,
-                WebSettingsCompat.FORCE_DARK_OFF
+                if (getBoolean(R.bool.feature_dark_mode)) {
+                    WebSettingsCompat.FORCE_DARK_ON
+                } else {
+                    WebSettingsCompat.FORCE_DARK_OFF
+                }
             )
         }
 
@@ -77,6 +96,10 @@ class MainActivity : AppCompatActivity() {
 
                 if (scheme == "http" || scheme == "https") {
                     return false
+                }
+
+                if (!getBoolean(R.bool.feature_external_links)) {
+                    return true
                 }
 
                 return try {
@@ -102,38 +125,34 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        webView.webChromeClient = object : WebChromeClient() {
-            override fun onShowFileChooser(
-                webView: WebView,
-                filePathCallback: ValueCallback<Array<Uri>>,
-                fileChooserParams: FileChooserParams
-            ): Boolean {
-                uploadCallback?.onReceiveValue(null)
-                uploadCallback = filePathCallback
+        if (getBoolean(R.bool.feature_file_upload)) {
+            webView.webChromeClient = object : WebChromeClient() {
+                override fun onShowFileChooser(
+                    webView: WebView,
+                    filePathCallback: ValueCallback<Array<Uri>>,
+                    fileChooserParams: FileChooserParams
+                ): Boolean {
+                    uploadCallback?.onReceiveValue(null)
+                    uploadCallback = filePathCallback
 
-                return try {
-                    startActivityForResult(
-                        fileChooserParams.createIntent(),
-                        FILE_CHOOSER_REQUEST
-                    )
-                    true
-                } catch (_: ActivityNotFoundException) {
-                    uploadCallback = null
-                    false
+                    return try {
+                        startActivityForResult(
+                            fileChooserParams.createIntent(),
+                            FILE_CHOOSER_REQUEST
+                        )
+                        true
+                    } catch (_: ActivityNotFoundException) {
+                        uploadCallback = null
+                        false
+                    }
                 }
             }
         }
 
-        refresh.setOnRefreshListener {
-            webView.reload()
-        }
-    }
-
-    override fun onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack()
-        } else {
-            super.onBackPressed()
+        if (getBoolean(R.bool.feature_pull_refresh)) {
+            refresh.setOnRefreshListener {
+                webView.reload()
+            }
         }
     }
 
