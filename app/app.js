@@ -22,7 +22,7 @@ cores:[
 {id:"core-3",cable_id:"cab-jb1-jb3",core_number:1,status:"IN_USE"},
 {id:"core-4",cable_id:"cab-jb2-odc",core_number:1,status:"IN_USE"},
 {id:"core-5",cable_id:"cab-odc-odp",core_number:1,status:"IN_USE"}]};
-let db=JSON.parse(localStorage.getItem(KEY)||"null")||seed;
+let db=JSON.parse(localStorage.getItem(KEY)||"null")||seed;db.coreConnections=db.coreConnections||[];
 const $=id=>document.getElementById(id), save=()=>localStorage.setItem(KEY,JSON.stringify(db));
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 function options(list,value,empty="— Tidak ada —"){return '<option value="">'+empty+'</option>'+list.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===value?"selected":"")+'>'+esc(x.code||x.name||x.id)+'</option>').join("")}
