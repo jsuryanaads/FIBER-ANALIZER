@@ -1,4 +1,4 @@
-import {createClient} from "https://esm.sh/@supabase/supabase-js@2";
+import {createClient} from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from "./supabase-config.js";
 const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 import {shortestTrace,coreTrace,validateGraph} from "./graph-engine.js";
@@ -13,7 +13,7 @@ const ROLE_PERMISSIONS={
 };
 let currentUser=null;
 let currentProfile=null;
-const portalRole=()=>({"/admin/login":"ADMINISTRATOR","/pengelola/login":"PENGELOLA","/teknisi/login":"TEKNISI"}[location.pathname]||"");
+const portalRole=()=>{const p=location.pathname.replace(/\\/+$/,"")||"/";return ({"/admin/login":"ADMINISTRATOR","/pengelola/login":"PENGELOLA","/teknisi/login":"TEKNISI"}[p.replace(APP_BASE,"")]||"")};
 const portalLabel=role=>({ADMINISTRATOR:"Administrator",PENGELOLA:"Pengelola",TEKNISI:"Teknisi"}[role]||"Portal");
 const roleCan=permission=>!!currentProfile&&((ROLE_PERMISSIONS[currentProfile.role]||[]).includes("*")||(ROLE_PERMISSIONS[currentProfile.role]||[]).includes(permission));
 const canManageUsers=()=>currentProfile?.role==="ADMINISTRATOR";
