@@ -6,6 +6,10 @@ const missing=[...new Set(ids)].filter(id=>!new RegExp(`(?:id|name)=["']${id}["'
 if(missing.length)throw new Error("UI IDs missing from index.html: "+missing.join(", "));
 if(!html.includes('src="./app.js"'))throw new Error("app.js is not loaded");
 if(!html.includes('id="connectionList"'))throw new Error("Core connection UI missing");
+if(!html.includes('id="oltPorts"'))throw new Error("OLT port inventory UI missing");
+if(!js.includes("function renderOltPorts()"))throw new Error("OLT port renderer missing");
+if(!js.includes("fromPort")||!js.includes("toPort"))throw new Error("Cable port mapping missing");
+if(!js.includes("olt_ports"))throw new Error("OLT port metadata missing");
 
 const topologyMatch=js.match(/const topology=\[(.*?)\];/s)?.[1]||"";
 if(/"PON"|"OLT_PON"|"OBT"/.test(topologyMatch))throw new Error("Legacy PON/OBT type leaked into active topology");
