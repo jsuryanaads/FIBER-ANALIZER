@@ -47,7 +47,8 @@ coreConnections:[
 {id:"cc-6",nodeId:"odc-odp-1",inputCableId:"cab-jb2-odcodp",inputCoreId:"core-5",outputCableId:"cab-odcodp-jb2",outputCoreId:"core-7",connectionType:"SPLICE",status:"ACTIVE"},
 {id:"cc-7",nodeId:"odc-1",inputCableId:"cab-jb3-odc",inputCoreId:"core-6",outputCableId:"cab-odc-odp",outputCoreId:"core-8",connectionType:"SPLICE",status:"ACTIVE"}
 ]};
-let db=JSON.parse(localStorage.getItem(KEY)||"null")||structuredClone(seed);
+const emptyDb=()=>({assets:[],links:[],logicalLinks:[],splices:[],splitterOutputs:[],splitterConnections:[],cables:[],cores:[],splitters:[],coreConnections:[]});
+let db=JSON.parse(localStorage.getItem(KEY)||"null")||emptyDb();
 db.assets=db.assets||[];db.cables=db.cables||[];db.cores=db.cores||[];db.coreConnections=db.coreConnections||[];db.splitterOutputs=db.splitterOutputs||[];
 function migrateLegacyTopology(){
   const legacyPonIds=new Set(db.assets.filter(a=>a.type==="OLT_PON"||a.type==="PON").map(a=>a.id));
@@ -165,7 +166,7 @@ $("connectionForm").onsubmit=e=>{e.preventDefault();const id=$("connectionId").v
 $("connectionList").onclick=e=>{const edit=e.target.dataset.connEdit,del=e.target.dataset.connDel;if(edit)openConnection(db.coreConnections.find(x=>x.id===edit));if(del&&confirm("Hapus mapping core ini?")){db.coreConnections=db.coreConnections.filter(x=>x.id!==del);save();render()}};
 $("addConnection").onclick=()=>openConnection();
 $("cableList").onclick=e=>{const edit=e.target.dataset.cableEdit,del=e.target.dataset.cableDel;if(edit)openCable(db.cables.find(c=>c.id===edit));if(del&&confirm("Hapus kabel dan seluruh core kabel ini?")){db.cables=db.cables.filter(c=>c.id!==del);db.cores=db.cores.filter(c=>c.cable_id!==del);db.coreConnections=(db.coreConnections||[]).filter(x=>x.inputCableId!==del&&x.outputCableId!==del);save();render()}};
-$("resetDemo").onclick=()=>{if(confirm("Reset seluruh data demo di browser?")){db=structuredClone(seed);save();render()}};
+$("resetDemo").onclick=()=>{if(confirm("Hapus seluruh data jaringan di browser? Data ini tidak dapat dipulihkan.")){db=emptyDb();save();render()}};
 function splitterLoss(ratio){const n=Number(String(ratio).split(":")[1])||1;return 10*Math.log10(n)}
 function splitterAllowed(type){return type==="ODC_ODP"||type==="ODC"||type==="ODP"}
 function renderSplitterConnections(){
