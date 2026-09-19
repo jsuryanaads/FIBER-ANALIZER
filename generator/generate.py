@@ -44,6 +44,13 @@ def validate_version_code(value) -> int:
     return value
 
 
+def validate_version_name(value: str) -> str:
+    value = str(value).strip()
+    if not value or not re.match(r"^[0-9A-Za-z][0-9A-Za-z._+-]*$", value):
+        raise ValueError("version_name contains invalid characters")
+    return value
+
+
 def replace_tokens(path: Path, values: dict[str, str]) -> None:
     text = path.read_text(encoding="utf-8")
     for key, value in values.items():
@@ -80,7 +87,7 @@ def load_config(args: argparse.Namespace) -> dict:
     config["app_name"] = str(config.get("app_name", "")).strip()
     config["package_name"] = str(config.get("package_name", "")).strip()
     config["website_url"] = str(config.get("website_url", "")).strip()
-    config["version_name"] = str(config.get("version_name", "1.0.0")).strip() or "1.0.0"
+    config["version_name"] = validate_version_name(config.get("version_name", "1.0.0"))
     config["version_code"] = validate_version_code(config.get("version_code", 1))
     config["theme"]["primary_color"] = validate_hex(
         str(config["theme"].get("primary_color", "#111827")), "Primary Color"
@@ -109,6 +116,8 @@ def copy_icon(config: dict, destination: Path) -> None:
         if icon_path.suffix.lower() != ".png":
             raise ValueError("App Icon must be a PNG file")
         shutil.copy2(icon_path, icon_target)
+        fallback = destination / "app" / "src" / "main" / "res" / "drawable" / "ic_launcher.xml"
+        fallback.unlink(missing_ok=True)
     else:
         fallback = destination / "app" / "src" / "main" / "res" / "drawable" / "ic_launcher.xml"
         if not fallback.exists():
@@ -154,7 +163,7 @@ def main() -> None:
         "__APP_NAME__": config["app_name"].replace("&", "&amp;"),
         "__APP_URL__": config["website_url"].replace("&", "&amp;"),
         "__PACKAGE_NAME__": config["package_name"],
-        "__VERSION_NAME__": config["version_name"].replace('"', "\\""),
+        "__VERSION_NAME__": config["version_name"],
         "__VERSION_CODE__": str(config["version_code"]),
         "__PRIMARY_COLOR__": config["theme"]["primary_color"],
         "__SPLASH_COLOR__": config["theme"]["splash_color"],
