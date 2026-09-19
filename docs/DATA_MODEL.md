@@ -5,7 +5,7 @@
 The topology is a **flexible graph**, not a fixed OLT → JB → ODC → ODP chain. Every supported network node may connect to any other supported node when that physical route exists.
 
 Canonical UI node types:
-- OLT_PON
+- OLT
 - OTB
 - JB
 - ODC_ODP (ditampilkan sebagai BOX ODC-ODP)
@@ -19,7 +19,7 @@ A cable is a physical segment connecting two nodes. Each cable has its own fiber
 
 ## Primary entities
 
-### olt / pon
+### olt
 - id
 - code
 - name
@@ -33,7 +33,7 @@ A cable is a physical segment connecting two nodes. Each cable has its own fiber
 - created_at
 - updated_at
 
-### olt_pon logical details
+### olt port details
 - id
 - olt_id
 - slot
@@ -44,7 +44,9 @@ A cable is a physical segment connecting two nodes. Each cable has its own fiber
 - status
 - notes
 
-Unique logical identity should normally be: olt_id + slot + port.
+Unique logical identity: olt_id + port_number.
+
+An OLT can have many ports. A cable endpoint may bind to a specific OLT port, e.g. OLT Port 1 → OTB-01 Port 1 or OLT Port 2 → OTB-03 Port 1.
 
 ### otb / jb / odc_odp / odc / odp / customer nodes
 - id
