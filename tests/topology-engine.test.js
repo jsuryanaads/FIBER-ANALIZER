@@ -16,3 +16,6 @@ export function validateTopology(db){
  }
  return {valid:errors.length===0,errors};
 }
+
+const sample={assets:[{id:"a"},{id:"b"}],cables:[{id:"c1",code:"C1",from:"a",to:"b",fiber_count:12}],cores:[{id:"k1",cable_id:"c1",core_number:1}]};
+const result=validateTopology(sample);if(!result.valid)throw new Error(result.errors.join("; "));console.log("topology integrity test passed");
