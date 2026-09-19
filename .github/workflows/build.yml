@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -33,11 +33,21 @@ jobs:
           sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
 
       - name: Validate generator
-        run: python3 -m py_compile generator/generate.py
+        run: |
+          python3 -m py_compile generator/generate.py
+          python3 -m py_compile generator/generator_app.py
 
       - name: Generate sample Android project
         run: |
-          python3 generator/generate.py             --url "https://example.com"             --name "WebVIEW Sample"             --package "com.jsuryana.webviewsample"
+          python3 generator/generate.py             --url "https://example.com"             --name "WebVIEW Sample"             --package "com.jsuryana.webviewsample"             --version-name "1.0.0"             --version-code 1             --primary-color "#111827"             --splash-color "#0F172A"
+
+      - name: Verify generated branding and configuration
+        working-directory: generated/webview-sample
+        run: |
+          grep -q 'versionCode = 1' app/build.gradle.kts
+          grep -q 'android:icon="@drawable/ic_launcher"' app/src/main/AndroidManifest.xml
+          grep -q 'https://example.com' app/src/main/res/values/strings.xml
+          test -f app/src/main/res/drawable/ic_launcher.xml
 
       - name: Install Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -50,8 +60,19 @@ jobs:
         working-directory: generated/webview-sample
         run: ./gradlew assembleDebug
 
-      - name: Upload APK
+      - name: Build release APK
+        working-directory: generated/webview-sample
+        run: ./gradlew assembleRelease
+
+      - name: Build release AAB
+        working-directory: generated/webview-sample
+        run: ./gradlew bundleRelease
+
+      - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: webview-generator-debug-apk
-          path: generated/webview-sample/app/build/outputs/apk/debug/*.apk
+          name: webview-generator-android-builds
+          path: |
+            generated/webview-sample/app/build/outputs/apk/debug/*.apk
+            generated/webview-sample/app/build/outputs/apk/release/*.apk
+            generated/webview-sample/app/build/outputs/bundle/release/*.aab
