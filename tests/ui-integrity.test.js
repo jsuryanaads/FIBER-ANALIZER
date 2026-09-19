@@ -28,6 +28,7 @@ if(!js.includes("ROLE_PERMISSIONS")||!js.includes("user.manage"))throw new Error
 if(!js.includes("supabase.auth.signInWithPassword"))throw new Error("Supabase login missing");
 if(!js.includes("network_assets")||!js.includes("network_cables")||!js.includes("network_cores"))throw new Error("Supabase network CRUD tables missing");
 if(!js.includes("syncNetworkState")||!js.includes("readNetworkState"))throw new Error("Supabase network persistence missing");
+if(!js.includes("loadOperationalData")||!js.includes("syncOperationalData")||!js.includes("incidents")||!js.includes("work_orders"))throw new Error("Operational Supabase persistence missing");
 if(!js.includes("supabase.auth.signUp"))throw new Error("Administrator registration missing");
 if(!js.includes('supabase.functions.invoke("admin-user"'))throw new Error("Admin user invitation missing");
 if(!js.includes('"/admin/login"')||!js.includes('"/pengelola/login"')||!js.includes('"/teknisi/login"'))throw new Error("Role portal routes missing");
