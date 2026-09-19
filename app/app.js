@@ -164,7 +164,66 @@ $("connectionList").onclick=e=>{const edit=e.target.dataset.connEdit,del=e.targe
 $("addConnection").onclick=()=>openConnection();
 $("cableList").onclick=e=>{const edit=e.target.dataset.cableEdit,del=e.target.dataset.cableDel;if(edit)openCable(db.cables.find(c=>c.id===edit));if(del&&confirm("Hapus kabel dan seluruh core kabel ini?")){db.cables=db.cables.filter(c=>c.id!==del);db.cores=db.cores.filter(c=>c.cable_id!==del);db.coreConnections=(db.coreConnections||[]).filter(x=>x.inputCableId!==del&&x.outputCableId!==del);save();render()}};
 $("resetDemo").onclick=()=>{if(confirm("Reset seluruh data demo di browser?")){db=structuredClone(seed);save();render()}};
-render();
+function splitterLoss(ratio){const n=Number(String(ratio).split(":")[1])||1;return 10*Math.log10(n)}
+function splitterAllowed(type){return type==="ODC_ODP"||type==="ODC"||type==="ODP"}
+function renderSplitterConnections(){
+  const byId=Object.fromEntries(db.splitters.map(s=>[s.id,s]));
+  const nodes=Object.fromEntries(db.assets.map(a=>[a.id,a]));
+  $("splitterConnectionList").innerHTML=(db.splitterConnections||[]).map(x=>{
+    const a=byId[x.fromSplitterId],b=byId[x.toSplitterId];
+    return '<div class="cable-card"><div><b>'+esc(nodes[x.nodeId]?.code||x.nodeId)+'</b><span class="badge">INTERNAL PATCH</span></div><div class="muted">'+esc(a?.id||x.fromSplitterId)+' · Port '+esc(x.fromPort)+' → '+esc(b?.id||x.toSplitterId)+' · INPUT</div><div class="cable-actions"><button class="danger" data-splitter-conn-del="'+esc(x.id)+'">Hapus</button></div></div>';
+  }).join("")||'<p class="muted">Belum ada koneksi internal antar splitter.</p>';
+}
+function splitterOptions(nodeId,value=""){
+  return '<option value="">— Pilih splitter —</option>'+db.splitters.filter(s=>s.nodeId===nodeId).sort((x,y)=>(x.stage||0)-(y.stage||0)).map(s=>'<option value="'+esc(s.id)+'" '+(s.id===value?"selected":"")+'>'+esc(s.id)+' · '+esc(s.ratio)+' · Stage '+esc(s.stage)+'</option>').join("");
+}
+function openSplitterConnection(x={}){
+  $("splitterConnectionId").value=x.id||"";
+  $("splitterConnectionNode").innerHTML=nodeOptions(x.nodeId||"");
+  $("splitterConnectionFrom").innerHTML=splitterOptions(x.nodeId||"",x.fromSplitterId||"");
+  $("splitterConnectionTo").innerHTML=splitterOptions(x.nodeId||"",x.toSplitterId||"");
+  $("splitterConnectionPort").value=x.fromPort||1;
+  $("splitterConnectionToPort").value=x.toPort||"INPUT";
+  $("splitterConnectionDialog").showModal();
+}
+function renderSplitters(){
+  const byId=Object.fromEntries(db.assets.map(a=>[a.id,a]));
+  const groups=new Map();
+  (db.splitters||[]).forEach(s=>{if(!groups.has(s.nodeId))groups.set(s.nodeId,[]);groups.get(s.nodeId).push(s)});
+  $("splitterList").innerHTML=[...groups.entries()].map(([nodeId,list])=>{
+    const a=byId[nodeId]; const total=list.reduce((n,s)=>n+splitterLoss(s.ratio),0);
+    return '<div class="splitter-card"><div><b>'+esc(a?.code||nodeId)+'</b><span class="badge">'+esc(a?.type||"")+'</span></div>'+
+      '<div class="splitter-chain">'+list.sort((x,y)=>(x.stage||0)-(y.stage||0)).map(s=>'<span>'+esc(s.ratio)+' <small>Stage '+esc(s.stage||1)+'</small> <em>'+splitterLoss(s.ratio).toFixed(2)+' dB</em></span>').join('<b>→</b>')+
+      '</div><div class="muted">Total theoretical splitter loss: '+total.toFixed(2)+' dB · '+list.length+' splitter</div>'+
+      '<div class="cable-actions">'+list.map(s=>'<button class="danger" data-splitter-del="'+esc(s.id)+'">Hapus</button>').join('')+'</div></div>'
+  }).join('')||'<p class="muted">Belum ada konfigurasi splitter.</p>';
+}
+function fillSplitterNodes(value=""){
+  $("splitterNode").innerHTML='<option value="">— Pilih ODC-ODP / ODC / ODP —</option>'+
+    db.assets.filter(a=>splitterAllowed(a.type)).map(a=>'<option value="'+esc(a.id)+'" '+(a.id===value?"selected":"")+'>'+esc(a.code)+' — '+esc(a.type)+'</option>').join('');
+}
+function openSplitter(s={}){
+  $("splitterId").value=s.id||"";
+  fillSplitterNodes(s.nodeId||"");
+  $("splitterRatio").value=s.ratio||"1:4";
+  $("splitterStage").value=s.stage||1;
+  $("splitterHint").textContent=s.nodeId&&db.assets.find(a=>a.id===s.nodeId)?.type==="ODP"?"ODP hanya menggunakan 1:8.":"ODC-ODP dan ODC dapat memiliki beberapa splitter dan beberapa stage.";
+  $("splitterDialog").showModal();
+}
+$("addSplitter").onclick=()=>openSplitter();
+$("splitterNode").onchange=()=>{
+  const type=db.assets.find(a=>a.id===$("splitterNode").value)?.type;
+  if(type==="ODP"){$("splitterRatio").value="1:8";$("splitterRatio").disabled=true}else $("splitterRatio").disabled=false;
+  $("splitterHint").textContent=type==="ODP"?"ODP hanya menggunakan splitter 1:8.":"BOX ODC-ODP dan BOX ODC dapat memakai beberapa splitter.";
+};
+$("splitterForm").onsubmit=e=>{
+  e.preventDefault();
+  const id=$("splitterId").value||crypto.randomUUID(),nodeId=$("splitterNode").value,ratio=$("splitterRatio").value,stage=Math.max(1,Number($("splitterStage").value)||1),node=db.assets.find(a=>a.id===nodeId);
+  if(!node||!splitterAllowed(node.type)){alert("Splitter hanya dapat dipasang pada ODC-ODP, ODC, atau ODP.");return}
+  if(node.type==="ODP"&&ratio!=="1:8"){alert("ODP wajib menggunakan splitter 1:8.");return}
+  const item={id,nodeId,ratio,stage};
+  const i=db.splitters.findIndex(x=>x.id===id);if(i>=0)db.splitters[i]=item;else db.splitters.push(item);
+  save();$("splitterDialog").close();render();
 function renderOpticalAnalyzer(){
   const wavelength=Number($("optWavelength")?.value||1310);
   const wavelengthDefaults={1310:0.35,1490:0.30,1550:0.22};
