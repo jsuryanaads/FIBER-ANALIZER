@@ -6,7 +6,7 @@
   "version_code": 1,
   "theme": {
     "primary_color": "#111827",
-    "splash_color": "#111827",
+    "splash_color": "#0F172A",
     "dark_mode": false
   },
   "features": {
@@ -14,5 +14,6 @@
     "file_upload": true,
     "pull_to_refresh": true,
     "external_links": true
-  }
+  },
+  "icon_path": ""
 }
