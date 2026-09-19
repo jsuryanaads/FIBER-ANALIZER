@@ -5,6 +5,7 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import androidx.annotation.BoolRes
 import android.webkit.CookieManager
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -23,6 +24,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private lateinit var refresh: SwipeRefreshLayout
     private var uploadCallback: ValueCallback<Array<Uri>>? = null
+
+    private fun getBoolean(@BoolRes id: Int): Boolean = resources.getBoolean(id)
 
     private val startUrl: String
         get() = getString(R.string.start_url)
@@ -181,7 +184,6 @@ class MainActivity : AppCompatActivity() {
         webView.apply {
             stopLoading()
             webChromeClient = null
-            webViewClient = null
             loadUrl("about:blank")
             clearHistory()
             removeAllViews()

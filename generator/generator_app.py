@@ -167,7 +167,7 @@ class GeneratorApp(tk.Tk):
         for line in p.stdout or []: self._post("log",line.rstrip())
         code=p.wait()
         if code!=0: raise RuntimeError(f"Gradle build gagal (exit code {code}).")
-        artifact=project/"app"/"build"/"outputs"/("bundle"/"release" if kind=="bundle" else "apk"/("release" if kind=="release" else "debug"))
+        artifact = (project/"app"/"build"/"outputs"/"bundle"/"release") if kind=="bundle" else (project/"app"/"build"/"outputs"/"apk"/("release" if kind=="release" else "debug"))
         self._post("log",f"BUILD SUCCESS: {task}"); self._post("log",f"ARTIFACT: {artifact}"); return artifact
 
     def _run_async(self,fn,success):
