@@ -3,6 +3,8 @@ import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from "./supabase-config.js";
 const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 import {shortestTrace,coreTrace,validateGraph} from "./graph-engine.js";
 const KEY="fiber-analyzer-flex-v3";
+const APP_BASE="/FIBER-ANALIZER";
+const route=path=>APP_BASE+path;
 const $=id=>document.getElementById(id);
 const ROLE_PERMISSIONS={
   ADMINISTRATOR:["*","user.manage","system.reset","settings.manage"],
@@ -36,7 +38,7 @@ function showAuth(error="",register=false){
   const role=pathRole||"";
   const title=role?portalLabel(role)+" Login":"Pilih Portal Login";
   if(!role){
-    body.innerHTML='<h2>Secure Access</h2><p>Pilih portal sesuai akun Anda.</p><div class="portal-grid"><a class="portal-card" href="/admin/login"><b>Administrator</b><span>Manajemen sistem & user</span></a><a class="portal-card" href="/pengelola/login"><b>Pengelola</b><span>Operasional jaringan</span></a><a class="portal-card" href="/teknisi/login"><b>Teknisi</b><span>Lapangan & maintenance</span></a></div>';
+    body.innerHTML='<h2>Secure Access</h2><p>Pilih portal sesuai akun Anda.</p><div class="portal-grid"><a class="portal-card" href="/FIBER-ANALIZER/admin/login"><b>Administrator</b><span>Manajemen sistem & user</span></a><a class="portal-card" href="/FIBER-ANALIZER/pengelola/login"><b>Pengelola</b><span>Operasional jaringan</span></a><a class="portal-card" href="/FIBER-ANALIZER/teknisi/login"><b>Teknisi</b><span>Lapangan & maintenance</span></a></div>';
     return;
   }
   const isAdmin=role==="ADMINISTRATOR";
@@ -46,9 +48,9 @@ function showAuth(error="",register=false){
   if($("registerForm"))$("registerForm").onsubmit=async e=>{
     e.preventDefault();const email=$("registerEmail").value.trim(),name=$("registerName").value.trim(),username=$("registerUsername").value.trim(),org=$("registerOrg").value.trim(),pass=$("registerPass").value;
     if(pass!==$("registerPass2").value)return showAuth("Konfirmasi password tidak sama.",true);
-    const {data,error}=await supabase.auth.signUp({email,password:pass,options:{data:{name,username,organization_name:org},emailRedirectTo:location.origin+"/admin/login"}});
+    const {data,error}=await supabase.auth.signUp({email,password:pass,options:{data:{name,username,organization_name:org},emailRedirectTo:location.origin+APP_BASE+"/admin/login"}});
     if(error)return showAuth(error.message,true);
-    if(data.session){try{await loadProfile();location.href="/"}catch(err){showAuth(err.message,true)}}else showAuth("Pendaftaran berhasil. Periksa email untuk konfirmasi, lalu login di /admin/login.",false);
+    if(data.session){try{await loadProfile();location.href=route("/")}catch(err){showAuth(err.message,true)}}else showAuth("Pendaftaran berhasil. Periksa email untuk konfirmasi, lalu login di /admin/login.",false);
   };
   if($("backLogin"))$("backLogin").onclick=()=>showAuth("");
   if($("registerLink"))$("registerLink").onclick=()=>showAuth("",true);
@@ -74,7 +76,7 @@ async function initAuth(){
   $("userName").textContent=currentProfile.name||currentUser.email;
   $("userRole").textContent=currentProfile.role;
   $("userAvatar").textContent=(currentProfile.name||currentUser.email).slice(0,2).toUpperCase();
-  $("logoutBtn").onclick=async()=>{await supabase.auth.signOut();location.href="/admin/login"};
+  $("logoutBtn").onclick=async()=>{await supabase.auth.signOut();location.href="/FIBER-ANALIZER/admin/login"};
   document.querySelectorAll(".admin-only,.admin-nav").forEach(el=>el.style.display=currentProfile.role==="ADMINISTRATOR"?"":"none");
   return true;
 }
