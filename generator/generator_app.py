@@ -5,11 +5,14 @@ The desktop application is only the generator/build controller. Its output remai
 an Android Studio project plus APK/AAB artifacts.
 """
 from __future__ import annotations
-import json, os, queue, re, shutil, subprocess, sys, threading
+import json, os, queue, re, shutil, subprocess, sys, threading, urllib.request
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 from zipfile import ZIP_DEFLATED, ZipFile
+
+GRADLE_VERSION="8.13"
+GRADLE_URL=f"https://services.gradle.org/distributions/gradle-{GRADLE_VERSION}-bin.zip"
 
 ROOT=Path(__file__).resolve().parents[1]
 GENERATOR=ROOT/"generator"/"generate.py"
@@ -153,12 +156,47 @@ class GeneratorApp(tk.Tk):
         if wrapper.exists():
             if os.name!="nt": wrapper.chmod(wrapper.stat().st_mode|0o111)
             return [str(wrapper)]
-        gradle=shutil.which("gradle")
-        if not gradle: raise RuntimeError("Gradle tidak ditemukan. Install Gradle atau gunakan GitHub Actions.")
-        result=subprocess.run([gradle,"wrapper","--gradle-version","8.13","--distribution-type","bin"],cwd=project,text=True)
-        if result.returncode!=0: raise RuntimeError("Gagal membuat Gradle wrapper.")
+
+        gradle=shutil.which("gradle") or shutil.which("gradle.bat")
+        if not gradle:
+            gradle=self._bootstrap_gradle()
+        self._post("log",f"Gradle: {gradle}")
+
+        result=subprocess.run(
+            [gradle,"wrapper",f"--gradle-version={GRADLE_VERSION}","--distribution-type=bin"],
+            cwd=project,text=True,capture_output=True
+        )
+        if result.stdout: self._post("log",result.stdout.rstrip())
+        if result.stderr: self._post("log",result.stderr.rstrip())
+        if result.returncode!=0:
+            raise RuntimeError("Gagal membuat Gradle wrapper. Pastikan JDK 17 tersedia dan project dapat dijalankan oleh Gradle.")
+        if not wrapper.exists():
+            raise RuntimeError("Gradle wrapper tidak terbentuk setelah perintah Gradle selesai.")
         if os.name!="nt": wrapper.chmod(wrapper.stat().st_mode|0o111)
         return [str(wrapper)]
+
+    def _bootstrap_gradle(self):
+        cache_root=Path(os.environ.get("LOCALAPPDATA",str(Path.home()))) / "WebVIEW-Generator" / "gradle"
+        install_dir=cache_root/f"gradle-{GRADLE_VERSION}"
+        executable=install_dir/"bin"/("gradle.bat" if os.name=="nt" else "gradle")
+        if executable.exists():
+            return str(executable)
+
+        cache_root.mkdir(parents=True,exist_ok=True)
+        archive=cache_root/f"gradle-{GRADLE_VERSION}-bin.zip"
+        self._post("log",f"Gradle tidak ditemukan. Mengunduh Gradle {GRADLE_VERSION}...")
+        try:
+            urllib.request.urlretrieve(GRADLE_URL,archive)
+            self._post("log",f"Gradle download selesai: {archive}")
+            with ZipFile(archive,"r") as z:
+                z.extractall(cache_root)
+            archive.unlink(missing_ok=True)
+        except Exception as exc:
+            archive.unlink(missing_ok=True)
+            raise RuntimeError(f"Tidak dapat menyiapkan Gradle {GRADLE_VERSION}: {exc}")
+        if not executable.exists():
+            raise RuntimeError(f"Gradle {GRADLE_VERSION} berhasil diunduh tetapi executable tidak ditemukan.")
+        return str(executable)
 
     def _build(self,kind):
         project=self._generate(); task={"debug":"assembleDebug","release":"assembleRelease","bundle":"bundleRelease"}[kind]
