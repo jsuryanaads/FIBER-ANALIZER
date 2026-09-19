@@ -4,7 +4,7 @@
 
 FIBER-ANALIZER is planned as an operational fiber-optic network management system, not only a loss calculator. The system must maintain a traceable digital model of the physical and logical network:
 
-**OLT → OTB → JB → ODC-ODP → ODC → ODP → Customer**
+**OLT → OLT Port → OTB → JB → ODC-ODP → ODC → ODP → Customer**
 
 Fiber cables and fiber cores are first-class objects connecting those nodes.
 
@@ -23,7 +23,7 @@ Fiber cables and fiber cores are first-class objects connecting those nodes.
 
 The canonical service topology is:
 
-OLT → OTB → JB → ODC-ODP → ODC → ODP → Customer
+OLT → OLT Port → OTB → JB → ODC-ODP → ODC → ODP → Customer
 
 Do not silently reorder or remove these network layers. Optional physical objects such as poles, handholes, closures and routes may exist alongside the topology.
 
@@ -31,7 +31,7 @@ Do not silently reorder or remove these network layers. Optional physical object
 
 ### 1. Inventory
 - OLT
-- OLT ports
+- OLT ports (each port may terminate an independent cable to an OTB)
 - Joint Box (JB)
 - ODC
 - ODP
