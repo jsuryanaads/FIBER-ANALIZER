@@ -224,6 +224,40 @@ $("splitterForm").onsubmit=e=>{
   const item={id,nodeId,ratio,stage};
   const i=db.splitters.findIndex(x=>x.id===id);if(i>=0)db.splitters[i]=item;else db.splitters.push(item);
   save();$("splitterDialog").close();render();
+};
+$("splitterConnectionNode").onchange=()=>{
+  const n=$("splitterConnectionNode").value;
+  $("splitterConnectionFrom").innerHTML=splitterOptions(n);
+  $("splitterConnectionTo").innerHTML=splitterOptions(n);
+};
+$("splitterConnectionForm").onsubmit=e=>{
+  e.preventDefault();
+  const id=$("splitterConnectionId").value||crypto.randomUUID(),nodeId=$("splitterConnectionNode").value,fromSplitterId=$("splitterConnectionFrom").value,toSplitterId=$("splitterConnectionTo").value,fromPort=Math.max(1,Number($("splitterConnectionPort").value)||1),toPort=$("splitterConnectionToPort").value||"INPUT";
+  const from=db.splitters.find(s=>s.id===fromSplitterId),to=db.splitters.find(s=>s.id===toSplitterId);
+  if(!nodeId||!from||!to||from.id===to.id){alert("Node dan dua splitter berbeda wajib dipilih.");return}
+  const maxPort=Number(String(from.ratio).split(":")[1])||0;
+  if(fromPort>maxPort){alert("Port output melebihi kapasitas splitter.");return}
+  const item={id,nodeId,fromSplitterId,fromPort,toSplitterId,toPort};
+  const i=(db.splitterConnections||[]).findIndex(x=>x.id===id);
+  if(i>=0)db.splitterConnections[i]=item;else db.splitterConnections.push(item);
+  const target=db.splitters.find(s=>s.id===toSplitterId);if(target){target.inputType="SPLITTER";target.inputSplitterId=fromSplitterId;target.inputPort=fromPort}
+  save();$("splitterConnectionDialog").close();render();
+};
+$("splitterConnectionList").onclick=e=>{
+  const id=e.target.dataset.splitterConnDel;
+  if(id&&confirm("Hapus koneksi internal splitter ini?")){db.splitterConnections=db.splitterConnections.filter(x=>x.id!==id);save();render()}
+};
+$("addSplitterConnection").onclick=()=>openSplitterConnection();
+$("splitterList").onclick=e=>{
+  const id=e.target.dataset.splitterDel;
+  if(id&&confirm("Hapus splitter ini?")){db.splitters=db.splitters.filter(s=>s.id!==id);save();render()}
+};
+
+$("optCustomer").onchange=()=>{ $("customerSelect").value=$("optCustomer").value; renderOpticalAnalyzer(); };
+$("customerSelect").onchange=()=>{ $("optCustomer").value=$("customerSelect").value; renderOpticalAnalyzer(); };
+["optWavelength","optAttenuation","optConnectorCount","optConnectorLoss","optSpliceCount","optSpliceLoss","optMargin","optBudget"].forEach(id=>$(id).oninput=renderOpticalAnalyzer);
+$("optWavelength").onchange=()=>{ const defaults={1310:"0.35",1490:"0.30",1550:"0.22"}; if($("optAttenuation").value===""||Number($("optAttenuation").value)===0)$("optAttenuation").value=defaults[$("optWavelength").value]||"0.35"; renderOpticalAnalyzer(); };
+
 function renderOpticalAnalyzer(){
   const wavelength=Number($("optWavelength")?.value||1310);
   const wavelengthDefaults={1310:0.35,1490:0.30,1550:0.22};
