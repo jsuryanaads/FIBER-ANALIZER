@@ -371,7 +371,7 @@ class GeneratorApp(tk.Tk):
         if not target:return
         with ZipFile(target,"w",ZIP_DEFLATED) as z:
             for p in project.rglob("*"):
-                if p.is_file() and ".gradle" not in p.parts and "build" not in p.parts: z.write(p,p.relative_to(project.parent))
+                if p.is_file() and ".gradle" not in p.parts and "build" not in p.parts and p.name != "local.properties": z.write(p,p.relative_to(project.parent))
         self.write_log(f"PROJECT ZIP: {target}"); messagebox.showinfo("Export",f"Project ZIP berhasil dibuat:\n{target}")
 
     def open_output(self):
