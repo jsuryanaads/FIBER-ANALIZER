@@ -8,9 +8,9 @@ Canonical UI node types:
 - OLT_PON
 - OTB
 - JB
-- ODC_ODP
-- ODC
-- ODP
+- ODC_ODP (ditampilkan sebagai BOX ODC-ODP)
+- ODC (ditampilkan sebagai BOX ODC)
+- ODP (ditampilkan sebagai BOX ODP)
 - CUSTOMER
 
 Examples of valid physical relationships include JB → JB, JB → ODC_ODP, JB → ODC, JB → ODP, ODC_ODP → JB, ODC → JB, ODP → JB, and other combinations. The database must not reject a connection solely because of node type ordering.
