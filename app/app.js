@@ -15,6 +15,7 @@ const seed={assets:[
 links:[{id:"svc-1",from:"odp-1",to:"c-1",kind:"SERVICE"}],
 logicalLinks:[],
 splices:[],
+splitterConnections:[{id:"sc-1",nodeId:"odc-odp-1",fromSplitterId:"sp-odcodp-1",fromPort:1,toSplitterId:"sp-odcodp-2",toPort:"INPUT"},{id:"sc-2",nodeId:"odc-odp-1",fromSplitterId:"sp-odcodp-2",fromPort:4,toSplitterId:"sp-odcodp-3",toPort:"INPUT"}],
 cables:[
 {id:"cab-oltpon-otb",code:"KBL-OLT-PON-OTB-24C",fiber_count:24,length_m:900,from:"oltpon-1",to:"otb-1",status:"ACTIVE"},
 {id:"cab-otb-jb1",code:"KBL-OTB-JB01-24C",fiber_count:24,length_m:120,from:"otb-1",to:"jb-1",status:"ACTIVE"},
@@ -33,7 +34,7 @@ cores:[
 {id:"core-6",cable_id:"cab-jb3-odc",core_number:4,status:"IN_USE"},
 {id:"core-7",cable_id:"cab-odcodp-jb2",core_number:3,status:"IN_USE"},
 {id:"core-8",cable_id:"cab-odc-odp",core_number:2,status:"IN_USE"}],
-splitters:[{id:"sp-odcodp-1",nodeId:"odc-odp-1",ratio:"1:4",stage:1},{id:"sp-odcodp-2",nodeId:"odc-odp-1",ratio:"1:8",stage:2},{id:"sp-odc-1",nodeId:"odc-1",ratio:"1:4",stage:1},{id:"sp-odc-2",nodeId:"odc-1",ratio:"1:4",stage:2},{id:"sp-odp-1",nodeId:"odp-1",ratio:"1:8",stage:1}],
+splitters:[{id:"sp-odcodp-1",nodeId:"odc-odp-1",ratio:"1:4",stage:1,inputType:"CORE",inputCableId:"cab-jb2-odcodp",inputCoreId:"core-5"},{id:"sp-odcodp-2",nodeId:"odc-odp-1",ratio:"1:4",stage:2,inputType:"SPLITTER",inputSplitterId:"sp-odcodp-1",inputPort:1},{id:"sp-odcodp-3",nodeId:"odc-odp-1",ratio:"1:4",stage:3,inputType:"SPLITTER",inputSplitterId:"sp-odcodp-2",inputPort:4},{id:"sp-odc-1",nodeId:"odc-1",ratio:"1:4",stage:1},{id:"sp-odc-2",nodeId:"odc-1",ratio:"1:4",stage:2},{id:"sp-odp-1",nodeId:"odp-1",ratio:"1:8",stage:1}],
 coreConnections:[
 {id:"cc-1",nodeId:"otb-1",inputCableId:"cab-oltpon-otb",inputCoreId:"core-1",outputCableId:"cab-otb-jb1",outputCoreId:"core-2",connectionType:"SPLICE",status:"ACTIVE"},
 {id:"cc-2",nodeId:"jb-1",inputCableId:"cab-otb-jb1",inputCoreId:"core-2",outputCableId:"cab-jb1-jb2",outputCoreId:"core-3",connectionType:"SPLICE",status:"ACTIVE"},
@@ -44,7 +45,7 @@ coreConnections:[
 {id:"cc-7",nodeId:"odc-1",inputCableId:"cab-jb3-odc",inputCoreId:"core-6",outputCableId:"cab-odc-odp",outputCoreId:"core-8",connectionType:"SPLICE",status:"ACTIVE"}
 ]};
 let db=JSON.parse(localStorage.getItem(KEY)||"null")||structuredClone(seed);
-db.assets=db.assets||[];db.links=db.links||[];db.cables=db.cables||[];db.cores=db.cores||[];db.coreConnections=db.coreConnections||[];db.splitters=db.splitters||[];
+db.assets=db.assets||[];db.links=db.links||[];db.cables=db.cables||[];db.cores=db.cores||[];db.coreConnections=db.coreConnections||[];db.splitters=db.splitters||[];db.splitterConnections=db.splitterConnections||[];
 function normalizeDb(){
   const existing=new Map(db.cores.map(c=>[(c.cable_id||"")+":"+c.core_number,c]));
   for(const cable of db.cables){
@@ -55,7 +56,9 @@ function normalizeDb(){
     }
   }
   db.splitters=(db.splitters||[]).filter(s=>db.assets.some(a=>a.id===s.nodeId)&&["ODC_ODP","ODC","ODP"].includes(db.assets.find(a=>a.id===s.nodeId)?.type)&&["1:2","1:4","1:8","1:16","1:32","1:64"].includes(s.ratio));
-  db.splitters.forEach(s=>{if(db.assets.find(a=>a.id===s.nodeId)?.type==="ODP")s.ratio="1:8"});
+  db.splitters.forEach(s=>{if(db.assets.find(a=>a.id===s.nodeId)?.type==="ODP")s.ratio="1:8";s.stage=Math.max(1,Number(s.stage)||1)});
+  const splitterIds=new Set(db.splitters.map(s=>s.id));
+  db.splitterConnections=db.splitterConnections.filter(x=>splitterIds.has(x.fromSplitterId)&&splitterIds.has(x.toSplitterId)&&db.assets.some(a=>a.id===x.nodeId));
   const cableIds=new Set(db.cables.map(c=>c.id));
   const coreIds=new Set(db.cores.map(c=>c.id));
   db.coreConnections=db.coreConnections.filter(x=>cableIds.has(x.inputCableId)&&cableIds.has(x.outputCableId)&&coreIds.has(x.inputCoreId)&&coreIds.has(x.outputCoreId)&&db.assets.some(a=>a.id===x.nodeId));
@@ -64,7 +67,7 @@ normalizeDb();
 const $=id=>document.getElementById(id), save=()=>localStorage.setItem(KEY,JSON.stringify(db));
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 function options(list,value,empty="— Tidak ada —"){return '<option value="">'+empty+'</option>'+list.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===value?"selected":"")+'>'+esc(x.code||x.name||x.id)+'</option>').join("")}
-function render(){renderStats();renderTopologyMap();renderCondition();renderAssets();renderCustomers();renderCores();renderCables();renderConnections();renderSplitters()}
+function render(){renderStats();renderTopologyMap();renderCondition();renderAssets();renderCustomers();renderCores();renderCables();renderConnections();renderSplitters();renderSplitterConnections()}
 function nodeOptions(value=""){return '<option value="">— Pilih node —</option>'+db.assets.map(a=>'<option value="'+esc(a.id)+'" '+(a.id===value?"selected":"")+'>'+esc(a.code)+' — '+esc(a.name)+'</option>').join("")}
 function openCable(c){c=c||{};$("cableId").value=c.id||"";$("cableCode").value=c.code||"";$("cableFrom").innerHTML=nodeOptions(c.from);$("cableTo").innerHTML=nodeOptions(c.to);$("cableFiberCount").value=c.fiber_count||12;$("cableLength").value=c.length_m||0;$("cableStatus").value=c.status||"ACTIVE";$("cableDialog").showModal()}
 function cablesAtNode(nodeId){return (db.cables||[]).filter(c=>c.from===nodeId||c.to===nodeId)}
@@ -149,6 +152,26 @@ $("resetDemo").onclick=()=>{if(confirm("Reset seluruh data demo di browser?")){d
 render();
 function splitterLoss(ratio){const n=Number(String(ratio).split(":")[1])||1;return 10*Math.log10(n)}
 function splitterAllowed(type){return type==="ODC_ODP"||type==="ODC"||type==="ODP"}
+function renderSplitterConnections(){
+  const byId=Object.fromEntries(db.splitters.map(s=>[s.id,s]));
+  const nodes=Object.fromEntries(db.assets.map(a=>[a.id,a]));
+  $("splitterConnectionList").innerHTML=(db.splitterConnections||[]).map(x=>{
+    const a=byId[x.fromSplitterId],b=byId[x.toSplitterId];
+    return '<div class="cable-card"><div><b>'+esc(nodes[x.nodeId]?.code||x.nodeId)+'</b><span class="badge">INTERNAL PATCH</span></div><div class="muted">'+esc(a?.id||x.fromSplitterId)+' · Port '+esc(x.fromPort)+' → '+esc(b?.id||x.toSplitterId)+' · INPUT</div><div class="cable-actions"><button class="danger" data-splitter-conn-del="'+esc(x.id)+'">Hapus</button></div></div>';
+  }).join("")||'<p class="muted">Belum ada koneksi internal antar splitter.</p>';
+}
+function splitterOptions(nodeId,value=""){
+  return '<option value="">— Pilih splitter —</option>'+db.splitters.filter(s=>s.nodeId===nodeId).sort((x,y)=>(x.stage||0)-(y.stage||0)).map(s=>'<option value="'+esc(s.id)+'" '+(s.id===value?"selected":"")+'>'+esc(s.id)+' · '+esc(s.ratio)+' · Stage '+esc(s.stage)+'</option>').join("");
+}
+function openSplitterConnection(x={}){
+  $("splitterConnectionId").value=x.id||"";
+  $("splitterConnectionNode").innerHTML=nodeOptions(x.nodeId||"");
+  $("splitterConnectionFrom").innerHTML=splitterOptions(x.nodeId||"",x.fromSplitterId||"");
+  $("splitterConnectionTo").innerHTML=splitterOptions(x.nodeId||"",x.toSplitterId||"");
+  $("splitterConnectionPort").value=x.fromPort||1;
+  $("splitterConnectionToPort").value=x.toPort||"INPUT";
+  $("splitterConnectionDialog").showModal();
+}
 function renderSplitters(){
   const byId=Object.fromEntries(db.assets.map(a=>[a.id,a]));
   const groups=new Map();
@@ -188,6 +211,29 @@ $("splitterForm").onsubmit=e=>{
   const i=db.splitters.findIndex(x=>x.id===id);if(i>=0)db.splitters[i]=item;else db.splitters.push(item);
   save();$("splitterDialog").close();render();
 };
+$("splitterConnectionNode").onchange=()=>{
+  const n=$("splitterConnectionNode").value;
+  $("splitterConnectionFrom").innerHTML=splitterOptions(n);
+  $("splitterConnectionTo").innerHTML=splitterOptions(n);
+};
+$("splitterConnectionForm").onsubmit=e=>{
+  e.preventDefault();
+  const id=$("splitterConnectionId").value||crypto.randomUUID(),nodeId=$("splitterConnectionNode").value,fromSplitterId=$("splitterConnectionFrom").value,toSplitterId=$("splitterConnectionTo").value,fromPort=Math.max(1,Number($("splitterConnectionPort").value)||1),toPort=$("splitterConnectionToPort").value||"INPUT";
+  const from=db.splitters.find(s=>s.id===fromSplitterId),to=db.splitters.find(s=>s.id===toSplitterId);
+  if(!nodeId||!from||!to||from.id===to.id){alert("Node dan dua splitter berbeda wajib dipilih.");return}
+  const maxPort=Number(String(from.ratio).split(":")[1])||0;
+  if(fromPort>maxPort){alert("Port output melebihi kapasitas splitter.");return}
+  const item={id,nodeId,fromSplitterId,fromPort,toSplitterId,toPort};
+  const i=(db.splitterConnections||[]).findIndex(x=>x.id===id);
+  if(i>=0)db.splitterConnections[i]=item;else db.splitterConnections.push(item);
+  const target=db.splitters.find(s=>s.id===toSplitterId);if(target){target.inputType="SPLITTER";target.inputSplitterId=fromSplitterId;target.inputPort=fromPort}
+  save();$("splitterConnectionDialog").close();render();
+};
+$("splitterConnectionList").onclick=e=>{
+  const id=e.target.dataset.splitterConnDel;
+  if(id&&confirm("Hapus koneksi internal splitter ini?")){db.splitterConnections=db.splitterConnections.filter(x=>x.id!==id);save();render()}
+};
+$("addSplitterConnection").onclick=()=>openSplitterConnection();
 $("splitterList").onclick=e=>{
   const id=e.target.dataset.splitterDel;
   if(id&&confirm("Hapus splitter ini?")){db.splitters=db.splitters.filter(s=>s.id!==id);save();render()}
