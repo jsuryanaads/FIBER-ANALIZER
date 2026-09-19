@@ -139,7 +139,7 @@ def write_local_properties(destination: Path) -> None:
     sdk = find_android_sdk()
     if sdk is None:
         raise RuntimeError("Android SDK tidak ditemukan. Set ANDROID_HOME/ANDROID_SDK_ROOT atau instal Android SDK, lalu generate ulang project.")
-    (destination / "local.properties").write_text(f"sdk.dir={sdk.as_posix()}\\n", encoding="utf-8")
+    (destination / "local.properties").write_text(f"sdk.dir={sdk.as_posix()}\n", encoding="utf-8")
     print(f"Android SDK: {sdk}")
 
 def copy_icon(config: dict, destination: Path) -> None:
