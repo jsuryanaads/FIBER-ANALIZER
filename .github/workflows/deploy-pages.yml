@@ -3,6 +3,7 @@ name: Deploy Fiber Analyzer
 on:
   push:
     branches:
+      - main
       - feature/fiber-network-foundation
   workflow_dispatch:
 
