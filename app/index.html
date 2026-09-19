@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FIBER-ANALIZER | Network Management</title><link rel="stylesheet" href="./styles.css"></head>
+<body>
+<header><div><span class="eyebrow">FIBER NETWORK MANAGEMENT</span><h1>FIBER-ANALIZER</h1><p>OLT → PON → JB → ODC → ODP → Customer</p></div><button id="resetDemo">Reset Demo</button></header>
+<main>
+<section class="stats" id="stats"></section>
+<section class="panel"><div class="panel-head"><h2>Network Topology</h2><button id="addAsset">+ Asset</button></div><div id="topology" class="topology"></div></section>
+<section class="grid">
+<div class="panel"><div class="panel-head"><h2>Assets</h2><input id="search" placeholder="Cari kode/nama..."></div><div id="assets"></div></div>
+<div class="panel"><div class="panel-head"><h2>Trace</h2><button id="traceBtn">Trace Customer</button></div><select id="customerSelect"></select><pre id="traceOutput">Pilih customer lalu Trace.</pre></div>
+</section>
+<section class="panel"><div class="panel-head"><h2>Core Inventory</h2></div><div id="cores"></div></section>
+</main>
+<dialog id="assetDialog"><form method="dialog" id="assetForm"><h2 id="dialogTitle">Tambah Asset</h2><input type="hidden" id="assetId"><label>Tipe<select id="assetType"><option>OLT</option><option>PON</option><option>JB</option><option>ODC</option><option>ODP</option><option>CUSTOMER</option></select></label><label>Kode<input id="assetCode" required></label><label>Nama<input id="assetName" required></label><label>Status<select id="assetStatus"><option>ACTIVE</option><option>INACTIVE</option><option>MAINTENANCE</option></select></label><div class="actions"><button value="cancel">Batal</button><button id="saveAsset" value="default">Simpan</button></div></form></dialog>
+<script src="./app.js" type="module"></script></body></html>
