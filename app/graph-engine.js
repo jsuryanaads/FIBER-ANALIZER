@@ -1,7 +1,7 @@
 export function buildGraph(db){
  const nodes=new Map((db.assets||[]).map(a=>[a.id,a])),adj=new Map();
  const add=(a,b,meta={})=>{if(!nodes.has(a)||!nodes.has(b))return;if(!adj.has(a))adj.set(a,[]);if(!adj.has(b))adj.set(b,[]);adj.get(a).push({to:b,...meta});adj.get(b).push({to:a,...meta});};
- for(const c of db.cables||[])add(c.from,c.to,{kind:"CABLE",cableId:c.id});
+ for(const c of db.cables||[])add(c.from,c.to,{kind:"CABLE",cableId:c.id,fromPort:Math.max(1,Number(c.fromPort)||1),toPort:Math.max(1,Number(c.toPort)||1)});
  for(const s of db.splices||[])add(s.from,s.to,{kind:"SPLICE",spliceId:s.id,inputCoreId:s.input_core_id,outputCoreId:s.output_core_id});
  for(const l of [...(db.links||[]),...(db.logicalLinks||[])])add(l.from,l.to,{kind:l.kind||"LINK",linkId:l.id,coreId:l.core_id});
  return {nodes,adj};
@@ -15,11 +15,15 @@ export function shortestTrace(db,startId,targetId){
  return{found:true,path:ids.map(id=>g.nodes.get(id)),edges};
 }
 export function validateGraph(db){
- const errors=[],ids=new Set((db.assets||[]).map(a=>a.id)),cableById=new Map((db.cables||[]).map(c=>[c.id,c])),coreById=new Map(),keys=new Set();
+ const errors=[],assets=db.assets||[],ids=new Set(assets.map(a=>a.id)),assetById=new Map(assets.map(a=>[a.id,a])),cableById=new Map((db.cables||[]).map(c=>[c.id,c])),coreById=new Map(),keys=new Set();
+ const portCount=a=>Math.max(1,Number(a?.port_count)||(a?.type==="OLT"?16:1));
+ const validatePort=(c,nodeId,port,side)=>{const n=assetById.get(nodeId),p=Number(port);if(!Number.isInteger(p)||p<1)errors.push("Cable "+c.code+": "+side+" port must be an integer >= 1");else if(p>portCount(n))errors.push("Cable "+c.code+": "+side+" port "+p+" exceeds "+portCount(n)+" ports on "+(n?.code||nodeId));};
  for(const c of db.cables||[]){
   if(!ids.has(c.from)||!ids.has(c.to))errors.push("Cable "+c.code+": endpoint missing");
   if(c.from===c.to)errors.push("Cable "+c.code+": self-loop");
   if(!(Number(c.fiber_count)>0))errors.push("Cable "+c.code+": fiber_count must be > 0");
+  if(ids.has(c.from))validatePort(c,c.from,c.fromPort,"fromPort");
+  if(ids.has(c.to))validatePort(c,c.to,c.toPort,"toPort");
  }
  for(const c of db.cores||[]){
   const k=c.cable_id+":"+c.core_number;if(keys.has(k))errors.push("Duplicate core "+k);keys.add(k);coreById.set(c.id,c);
@@ -60,7 +64,8 @@ export function coreTrace(db,startId,targetId){
    if(c.status==="INACTIVE"||c.status==="DAMAGED"||state.coreId===null||!incident(state.nodeId,state.coreId))continue;
    const core=coreById.get(state.coreId);if(!core||core.cable_id!==c.id)continue;
    const toNodeId=c.from===state.nodeId?c.to:c.from;
-   next.push({nodeId:toNodeId,coreId:state.coreId,step:{kind:"CABLE",cableId:c.id,coreId:state.coreId,toNodeId}});
+   const fromPort=Math.max(1,Number(c.from===state.nodeId?c.fromPort:c.toPort)||1),toPort=Math.max(1,Number(c.from===state.nodeId?c.toPort:c.fromPort)||1);
+   next.push({nodeId:toNodeId,coreId:state.coreId,step:{kind:"CABLE",cableId:c.id,coreId:state.coreId,toNodeId,fromPort,toPort}});
   }
   for(const x of connections){
    if(x.status==="INACTIVE"||x.nodeId!==state.nodeId||state.coreId===null)continue;
