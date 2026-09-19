@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/graph-engine.test.js && node tests/topology-engine.test.js"
+    "test": "node --check app/app.js && node tests/graph-engine.test.js && node tests/topology-engine.test.js && node tests/ui-integrity.test.js"
   },
   "engines": { "node": ">=22" }
 }
