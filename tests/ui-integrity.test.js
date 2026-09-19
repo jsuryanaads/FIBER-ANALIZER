@@ -21,3 +21,7 @@ if(!/type:"OLT"/.test(js))throw new Error("OLT asset type missing");
 if(/type:"PON"|type:"OLT_PON"|type:"OBT"/.test(js.match(/const seed=\{[\s\S]*?\};/)?.[0]||""))throw new Error("Legacy PON/OBT asset remains in demo seed");
 
 console.log("UI integrity test passed");
+if(!html.includes("Manajemen User"))throw new Error("User management UI missing");
+if(!html.includes("id=\"userForm\""))throw new Error("User management form missing");
+if(!js.includes("ROLE_PERMISSIONS")||!js.includes("user.manage"))throw new Error("RBAC permissions missing");
+console.log("RBAC UI integrity test passed");
