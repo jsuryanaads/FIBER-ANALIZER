@@ -1,5 +1,5 @@
 import {shortestTrace,coreTrace,validateGraph} from "./graph-engine.js";
-const KEY="fiber-analyzer-flex-v1";
+const KEY="fiber-analyzer-flex-v2";
 const topology=["OLT","PON","OTB","OBT","JB","ODC","ODP","CUSTOMER"];
 const seed={assets:[
 {id:"olt-1",type:"OLT",code:"OLT-01",name:"OLT Utama",status:"ACTIVE"},
@@ -39,31 +39,7 @@ coreConnections:[
 {id:"cc-jb1-jb3",nodeId:"jb-1",inputCableId:"cab-obt-jb1",inputCoreId:"core-obt-jb1-2",outputCableId:"cab-jb1-jb3",outputCoreId:"core-jb1-jb3-2",connectionType:"SPLICE",status:"ACTIVE"},
 {id:"cc-jb2-odc",nodeId:"jb-2",inputCableId:"cab-jb1-jb2",inputCoreId:"core-jb1-jb2-1",outputCableId:"cab-jb2-odc",outputCoreId:"core-jb2-odc-3",connectionType:"SPLICE",status:"ACTIVE"},
 {id:"cc-odc-odp",nodeId:"odc-1",inputCableId:"cab-jb2-odc",inputCoreId:"core-jb2-odc-3",outputCableId:"cab-odc-odp",outputCoreId:"core-odc-odp-2",connectionType:"SPLICE",status:"ACTIVE"}
-]};mport {shortestTrace,coreTrace,validateGraph} from "./graph-engine.js";
-const KEY="fiber-analyzer-flex-v1";
-const topology=["OLT","PON","OTB","OBT","JB","ODC","ODP","CUSTOMER"];
-const seed={assets:[
-{id:"olt-1",type:"OLT",code:"OLT-01",name:"OLT Utama",status:"ACTIVE"},
-{id:"pon-1",type:"PON",code:"PON-01",name:"PON Port 01",status:"ACTIVE"},
-{id:"jb-1",type:"JB",code:"JB-01",name:"Joint Box 01",status:"ACTIVE"},
-{id:"jb-2",type:"JB",code:"JB-02",name:"Joint Box 02",status:"ACTIVE"},
-{id:"jb-3",type:"JB",code:"JB-03",name:"Joint Box 03",status:"ACTIVE"},
-{id:"odc-1",type:"ODC",code:"ODC-01",name:"ODC Utama",status:"ACTIVE"},
-{id:"odp-1",type:"ODP",code:"ODP-01",name:"ODP 01",status:"ACTIVE"},
-{id:"c-1",type:"CUSTOMER",code:"CUST-001",name:"Pelanggan Demo",status:"ACTIVE"}],
-links:[{id:"svc-1",from:"odp-1",to:"c-1",kind:"SERVICE"}],logicalLinks:[{id:"logical-olt-pon",from:"olt-1",to:"pon-1",kind:"PON"}],splices:[],
-cables:[
-{id:"cab-olt-jb1",code:"KBL-OLT-JB01-24C",fiber_count:24,length_m:1000,from:"olt-1",to:"jb-1",status:"ACTIVE"},
-{id:"cab-jb1-jb2",code:"KBL-JB01-JB02-24C",fiber_count:24,length_m:600,from:"jb-1",to:"jb-2",status:"ACTIVE"},
-{id:"cab-jb1-jb3",code:"KBL-JB01-JB03-12C",fiber_count:12,length_m:450,from:"jb-1",to:"jb-3",status:"ACTIVE"},
-{id:"cab-jb2-odc",code:"KBL-JB02-ODC01-24C",fiber_count:24,length_m:700,from:"jb-2",to:"odc-1",status:"ACTIVE"},
-{id:"cab-odc-odp",code:"KBL-ODC01-ODP01-12C",fiber_count:12,length_m:300,from:"odc-1",to:"odp-1",status:"ACTIVE"}],
-cores:[
-{id:"core-1",cable_id:"cab-olt-jb1",core_number:1,status:"IN_USE"},
-{id:"core-2",cable_id:"cab-jb1-jb2",core_number:1,status:"IN_USE"},
-{id:"core-3",cable_id:"cab-jb1-jb3",core_number:1,status:"IN_USE"},
-{id:"core-4",cable_id:"cab-jb2-odc",core_number:1,status:"IN_USE"},
-{id:"core-5",cable_id:"cab-odc-odp",core_number:1,status:"IN_USE"}],coreConnections:[{id:"cc-1",nodeId:"jb-1",inputCableId:"cab-olt-jb1",inputCoreId:"core-1",outputCableId:"cab-jb1-jb2",outputCoreId:"core-2",connectionType:"SPLICE",status:"ACTIVE"},{id:"cc-2",nodeId:"jb-2",inputCableId:"cab-jb1-jb2",inputCoreId:"core-2",outputCableId:"cab-jb2-odc",outputCoreId:"core-4",connectionType:"SPLICE",status:"ACTIVE"},{id:"cc-3",nodeId:"odc-1",inputCableId:"cab-jb2-odc",inputCoreId:"core-4",outputCableId:"cab-odc-odp",outputCoreId:"core-5",connectionType:"SPLICE",status:"ACTIVE"}]};
+]};
 let db=JSON.parse(localStorage.getItem(KEY)||"null")||structuredClone(seed);
 db.assets=db.assets||[];db.links=db.links||[];db.cables=db.cables||[];db.cores=db.cores||[];db.coreConnections=db.coreConnections||[];
 function normalizeDb(){
