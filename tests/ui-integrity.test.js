@@ -28,5 +28,5 @@ if(!js.includes("ROLE_PERMISSIONS")||!js.includes("user.manage"))throw new Error
 if(!js.includes("supabase.auth.signInWithPassword"))throw new Error("Supabase login missing");
 if(!js.includes("supabase.auth.signUp"))throw new Error("Administrator registration missing");
 if(!js.includes("supabase.functions.invoke("admin-user""))throw new Error("Admin user invitation missing");
-if(!html.includes("/admin/login")||!html.includes("/pengelola/login")||!html.includes("/teknisi/login"))throw new Error("Role portal routes missing");
+if(!js.includes('"/admin/login"')||!js.includes('"/pengelola/login"')||!js.includes('"/teknisi/login"'))throw new Error("Role portal routes missing");
 console.log("RBAC UI integrity test passed");
