@@ -150,7 +150,7 @@ function renderCondition(){
   $("serviceStatus").innerHTML='<div class="service"><span>🟢 Pelanggan Aktif</span><b>'+active+'</b></div><div class="service"><span>🔴 Pelanggan Nonaktif</span><b>'+(customers.length-active)+'</b></div><div class="service"><span>⚠ Gangguan Aktif</span><b>0</b></div><div class="service"><span>🔧 Work Order Open</span><b>0</b></div>';
 }
 function renderAssets(){const q=$("search").value.toLowerCase();const a=db.assets.filter(x=>(x.code+" "+x.name+" "+x.type).toLowerCase().includes(q));$("assets").innerHTML=a.map(x=>'<div class="row"><div><b>'+esc(x.code)+'</b><div class="muted">'+esc(typeLabel(x.type))+' · '+esc(x.name)+'</div></div><span class="badge">'+esc(x.status)+'</span><div><button data-edit="'+esc(x.id)+'">Edit</button> <button class="danger" data-del="'+esc(x.id)+'">Hapus</button></div></div>').join("")||'<p class="muted">Tidak ada asset.</p>'}
-function renderCustomers(){$("customerSelect").innerHTML=db.assets.filter(x=>x.type==="CUSTOMER").map(x=>'<option value="'+esc(x.id)+'">'+esc(x.code)+' — '+esc(x.name)+'</option>').join("")}
+function renderCustomers(){const html=db.assets.filter(x=>x.type==="CUSTOMER").map(x=>'<option value="'+esc(x.id)+'">'+esc(x.code)+' — '+esc(x.name)+'</option>').join("");$("customerSelect").innerHTML=html;$("optCustomer").innerHTML='<option value="">— Pilih customer route —</option>'+html}
 function renderCores(){const cables=Object.fromEntries(db.cables.map(c=>[c.id,c]));$("cores").innerHTML='<table class="table"><thead><tr><th>Cable</th><th>Core</th><th>Status</th><th>Length</th></tr></thead><tbody>'+db.cores.map(c=>'<tr><td>'+esc(cables[c.cable_id]?.code||"-")+'</td><td>'+c.core_number+'</td><td><span class="badge">'+esc(c.status)+'</span></td><td>'+esc(cables[c.cable_id]?.length_m||"-")+' m</td></tr>').join("")+'</tbody></table>'}
 function openAsset(a){a=a||{};$("assetId").value=a.id||"";$("assetType").value=a.type||"OLT";$("assetCode").value=a.code||"";$("assetName").value=a.name||"";$("assetPortCount").value=a.port_count||16;$("assetStatus").value=a.status||"ACTIVE";$("dialogTitle").textContent=a.id?"Edit Asset":"Tambah Asset";$("assetDialog").showModal()}
 $("addAsset").onclick=()=>openAsset();$("addCable").onclick=()=>openCable();$("cableFrom").onchange=syncCablePorts;$("cableTo").onchange=syncCablePorts;$("search").oninput=renderAssets;
@@ -170,114 +170,33 @@ function renderOpticalAnalyzer(){
   const attenuation=Math.max(0,Number($("optAttenuation")?.value||0));
   const connectorCount=Math.max(0,Number($("optConnectorCount")?.value||0));
   const connectorLoss=Math.max(0,Number($("optConnectorLoss")?.value||0));
-  const spliceCount=Math.max(0,Number($("optSpliceCount")?.value||0));
   const spliceLoss=Math.max(0,Number($("optSpliceLoss")?.value||0));
   const margin=Math.max(0,Number($("optMargin")?.value||0));
   const budget=Math.max(0,Number($("optBudget")?.value||0));
-  const distance=(db.cables||[]).filter(c=>c.status==="ACTIVE").reduce((sum,c)=>sum+(Number(c.length_m)||0),0)/1000;
+  const customerId=$("optCustomer")?.value||"";
+  const olt=db.assets.find(a=>a.type==="OLT");
+  const trace=customerId&&olt?coreTrace(db,olt.id,customerId):{found:false,steps:[],path:[]};
+  const cables=Object.fromEntries((db.cables||[]).map(c=>[c.id,c]));
+  const distance=trace.found?trace.steps.filter(s=>s.kind==="CABLE").reduce((sum,s)=>sum+(Number(cables[s.cableId]?.length_m)||0),0)/1000:0;
   const fiberLoss=distance*attenuation;
+  const spliceCount=trace.found?trace.steps.filter(s=>["SPLICE","PASS_THROUGH"].includes(s.kind)).length:Math.max(0,Number($("optSpliceCount")?.value||0));
   const connectorTotal=connectorCount*connectorLoss;
   const spliceTotal=spliceCount*spliceLoss;
-  const splitterTotal=(db.splitters||[]).reduce((sum,s)=>sum+splitterLoss(s.ratio),0);
+  const splitterSteps=trace.found?trace.steps.filter(s=>s.kind==="SPLITTER"||s.kind==="SPLITTER_OUTPUT"):[]; 
+  const splitterTotal=splitterSteps.reduce((sum,s)=>sum+splitterLoss((db.splitters||[]).find(x=>x.id===s.splitterId)?.ratio),0);
   const total=fiberLoss+connectorTotal+spliceTotal+splitterTotal;
   const designTotal=total+margin;
   const within=designTotal<=budget;
   if($("opticalResult")) $("opticalResult").innerHTML=
     '<div><span>Wavelength</span><b>'+wavelength+' nm</b></div>'+
-    '<div><span>Active Fiber Distance</span><b>'+distance.toFixed(2)+' km</b></div>'+
+    '<div><span>Route Status</span><b>'+(trace.found?"FOUND":"SELECT CUSTOMER")+'</b></div>'+
+    '<div><span>Fiber Distance</span><b>'+distance.toFixed(2)+' km</b></div>'+
     '<div><span>Fiber Attenuation Loss</span><b>'+fiberLoss.toFixed(2)+' dB</b></div>'+
     '<div><span>Connector Loss</span><b>'+connectorTotal.toFixed(2)+' dB</b></div>'+
-    '<div><span>Splice Loss</span><b>'+spliceTotal.toFixed(2)+' dB</b></div>'+
-    '<div><span>Splitter Theoretical Loss</span><b>'+splitterTotal.toFixed(2)+' dB</b></div>'+
+    '<div><span>Splice Loss</span><b>'+spliceTotal.toFixed(2)+' dB ('+spliceCount+' event)</b></div>'+
+    '<div><span>Splitter Loss</span><b>'+splitterTotal.toFixed(2)+' dB ('+splitterSteps.length+' event)</b></div>'+
     '<div><span>Engineering Margin</span><b>'+margin.toFixed(2)+' dB</b></div>'+
     '<div class="total"><span>Design Loss</span><b>'+designTotal.toFixed(2)+' dB / '+budget.toFixed(2)+' dB</b></div>';
-  if($("lossVerdict")){$("lossVerdict").textContent=within?"Within Budget":"Over Budget";$("lossVerdict").className="badge "+(within?"success":"danger")}
+  if($("lossVerdict")){$("lossVerdict").textContent=trace.found?(within?"Within Budget":"Over Budget"):"Route Required";$("lossVerdict").className="badge "+(trace.found?(within?"success":"danger"):"")}
 }
-function splitterLoss(ratio){const n=Number(String(ratio).split(":")[1])||1;return 10*Math.log10(n)}
-function splitterAllowed(type){return type==="ODC_ODP"||type==="ODC"||type==="ODP"}
-function renderSplitterConnections(){
-  const byId=Object.fromEntries(db.splitters.map(s=>[s.id,s]));
-  const nodes=Object.fromEntries(db.assets.map(a=>[a.id,a]));
-  $("splitterConnectionList").innerHTML=(db.splitterConnections||[]).map(x=>{
-    const a=byId[x.fromSplitterId],b=byId[x.toSplitterId];
-    return '<div class="cable-card"><div><b>'+esc(nodes[x.nodeId]?.code||x.nodeId)+'</b><span class="badge">INTERNAL PATCH</span></div><div class="muted">'+esc(a?.id||x.fromSplitterId)+' · Port '+esc(x.fromPort)+' → '+esc(b?.id||x.toSplitterId)+' · INPUT</div><div class="cable-actions"><button class="danger" data-splitter-conn-del="'+esc(x.id)+'">Hapus</button></div></div>';
-  }).join("")||'<p class="muted">Belum ada koneksi internal antar splitter.</p>';
-}
-function splitterOptions(nodeId,value=""){
-  return '<option value="">— Pilih splitter —</option>'+db.splitters.filter(s=>s.nodeId===nodeId).sort((x,y)=>(x.stage||0)-(y.stage||0)).map(s=>'<option value="'+esc(s.id)+'" '+(s.id===value?"selected":"")+'>'+esc(s.id)+' · '+esc(s.ratio)+' · Stage '+esc(s.stage)+'</option>').join("");
-}
-function openSplitterConnection(x={}){
-  $("splitterConnectionId").value=x.id||"";
-  $("splitterConnectionNode").innerHTML=nodeOptions(x.nodeId||"");
-  $("splitterConnectionFrom").innerHTML=splitterOptions(x.nodeId||"",x.fromSplitterId||"");
-  $("splitterConnectionTo").innerHTML=splitterOptions(x.nodeId||"",x.toSplitterId||"");
-  $("splitterConnectionPort").value=x.fromPort||1;
-  $("splitterConnectionToPort").value=x.toPort||"INPUT";
-  $("splitterConnectionDialog").showModal();
-}
-function renderSplitters(){
-  const byId=Object.fromEntries(db.assets.map(a=>[a.id,a]));
-  const groups=new Map();
-  (db.splitters||[]).forEach(s=>{if(!groups.has(s.nodeId))groups.set(s.nodeId,[]);groups.get(s.nodeId).push(s)});
-  $("splitterList").innerHTML=[...groups.entries()].map(([nodeId,list])=>{
-    const a=byId[nodeId]; const total=list.reduce((n,s)=>n+splitterLoss(s.ratio),0);
-    return '<div class="splitter-card"><div><b>'+esc(a?.code||nodeId)+'</b><span class="badge">'+esc(a?.type||"")+'</span></div>'+
-      '<div class="splitter-chain">'+list.sort((x,y)=>(x.stage||0)-(y.stage||0)).map(s=>'<span>'+esc(s.ratio)+' <small>Stage '+esc(s.stage||1)+'</small> <em>'+splitterLoss(s.ratio).toFixed(2)+' dB</em></span>').join('<b>→</b>')+
-      '</div><div class="muted">Total theoretical splitter loss: '+total.toFixed(2)+' dB · '+list.length+' splitter</div>'+
-      '<div class="cable-actions">'+list.map(s=>'<button class="danger" data-splitter-del="'+esc(s.id)+'">Hapus</button>').join('')+'</div></div>'
-  }).join('')||'<p class="muted">Belum ada konfigurasi splitter.</p>';
-}
-function fillSplitterNodes(value=""){
-  $("splitterNode").innerHTML='<option value="">— Pilih ODC-ODP / ODC / ODP —</option>'+
-    db.assets.filter(a=>splitterAllowed(a.type)).map(a=>'<option value="'+esc(a.id)+'" '+(a.id===value?"selected":"")+'>'+esc(a.code)+' — '+esc(a.type)+'</option>').join('');
-}
-function openSplitter(s={}){
-  $("splitterId").value=s.id||"";
-  fillSplitterNodes(s.nodeId||"");
-  $("splitterRatio").value=s.ratio||"1:4";
-  $("splitterStage").value=s.stage||1;
-  $("splitterHint").textContent=s.nodeId&&db.assets.find(a=>a.id===s.nodeId)?.type==="ODP"?"ODP hanya menggunakan 1:8.":"ODC-ODP dan ODC dapat memiliki beberapa splitter dan beberapa stage.";
-  $("splitterDialog").showModal();
-}
-$("addSplitter").onclick=()=>openSplitter();
-$("splitterNode").onchange=()=>{
-  const type=db.assets.find(a=>a.id===$("splitterNode").value)?.type;
-  if(type==="ODP"){$("splitterRatio").value="1:8";$("splitterRatio").disabled=true}else $("splitterRatio").disabled=false;
-  $("splitterHint").textContent=type==="ODP"?"ODP hanya menggunakan splitter 1:8.":"BOX ODC-ODP dan BOX ODC dapat memakai beberapa splitter.";
-};
-$("splitterForm").onsubmit=e=>{
-  e.preventDefault();
-  const id=$("splitterId").value||crypto.randomUUID(),nodeId=$("splitterNode").value,ratio=$("splitterRatio").value,stage=Math.max(1,Number($("splitterStage").value)||1),node=db.assets.find(a=>a.id===nodeId);
-  if(!node||!splitterAllowed(node.type)){alert("Splitter hanya dapat dipasang pada ODC-ODP, ODC, atau ODP.");return}
-  if(node.type==="ODP"&&ratio!=="1:8"){alert("ODP wajib menggunakan splitter 1:8.");return}
-  const item={id,nodeId,ratio,stage};
-  const i=db.splitters.findIndex(x=>x.id===id);if(i>=0)db.splitters[i]=item;else db.splitters.push(item);
-  save();$("splitterDialog").close();render();
-};
-$("splitterConnectionNode").onchange=()=>{
-  const n=$("splitterConnectionNode").value;
-  $("splitterConnectionFrom").innerHTML=splitterOptions(n);
-  $("splitterConnectionTo").innerHTML=splitterOptions(n);
-};
-$("splitterConnectionForm").onsubmit=e=>{
-  e.preventDefault();
-  const id=$("splitterConnectionId").value||crypto.randomUUID(),nodeId=$("splitterConnectionNode").value,fromSplitterId=$("splitterConnectionFrom").value,toSplitterId=$("splitterConnectionTo").value,fromPort=Math.max(1,Number($("splitterConnectionPort").value)||1),toPort=$("splitterConnectionToPort").value||"INPUT";
-  const from=db.splitters.find(s=>s.id===fromSplitterId),to=db.splitters.find(s=>s.id===toSplitterId);
-  if(!nodeId||!from||!to||from.id===to.id){alert("Node dan dua splitter berbeda wajib dipilih.");return}
-  const maxPort=Number(String(from.ratio).split(":")[1])||0;
-  if(fromPort>maxPort){alert("Port output melebihi kapasitas splitter.");return}
-  const item={id,nodeId,fromSplitterId,fromPort,toSplitterId,toPort};
-  const i=(db.splitterConnections||[]).findIndex(x=>x.id===id);
-  if(i>=0)db.splitterConnections[i]=item;else db.splitterConnections.push(item);
-  const target=db.splitters.find(s=>s.id===toSplitterId);if(target){target.inputType="SPLITTER";target.inputSplitterId=fromSplitterId;target.inputPort=fromPort}
-  save();$("splitterConnectionDialog").close();render();
-};
-$("splitterConnectionList").onclick=e=>{
-  const id=e.target.dataset.splitterConnDel;
-  if(id&&confirm("Hapus koneksi internal splitter ini?")){db.splitterConnections=db.splitterConnections.filter(x=>x.id!==id);save();render()}
-};
-$("addSplitterConnection").onclick=()=>openSplitterConnection();
-$("splitterList").onclick=e=>{
-  const id=e.target.dataset.splitterDel;
-  if(id&&confirm("Hapus splitter ini?")){db.splitters=db.splitters.filter(s=>s.id!==id);save();render()}
-};
+
