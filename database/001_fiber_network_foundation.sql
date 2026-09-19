@@ -203,6 +203,8 @@ create index idx_splices_input on splices(input_core_id);
 create index idx_splices_output on splices(output_core_id);
 create index idx_service_paths_pon on service_paths(pon_id);
 
+comment on type node_type is 'UI labels: ODC_ODP = BOX ODC-ODP, ODC = BOX ODC, ODP = BOX ODP.';
+
 comment on table network_nodes is 'Normalized node abstraction. Cable endpoints are unrestricted by node-type ordering; topology is a flexible graph.';
 comment on table cables is 'Physical fiber cable segment. Cable cores are first-class resources.';
 comment on table cable_cores is 'Individual optical fiber cores and their utilization state.';
