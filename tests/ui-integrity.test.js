@@ -26,6 +26,8 @@ if(!html.includes("Manajemen User"))throw new Error("User management UI missing"
 if(!html.includes("id=\"userForm\""))throw new Error("User management form missing");
 if(!js.includes("ROLE_PERMISSIONS")||!js.includes("user.manage"))throw new Error("RBAC permissions missing");
 if(!js.includes("supabase.auth.signInWithPassword"))throw new Error("Supabase login missing");
+if(!js.includes("network_assets")||!js.includes("network_cables")||!js.includes("network_cores"))throw new Error("Supabase network CRUD tables missing");
+if(!js.includes("syncNetworkState")||!js.includes("readNetworkState"))throw new Error("Supabase network persistence missing");
 if(!js.includes("supabase.auth.signUp"))throw new Error("Administrator registration missing");
 if(!js.includes('supabase.functions.invoke("admin-user"'))throw new Error("Admin user invitation missing");
 if(!js.includes('"/admin/login"')||!js.includes('"/pengelola/login"')||!js.includes('"/teknisi/login"'))throw new Error("Role portal routes missing");
