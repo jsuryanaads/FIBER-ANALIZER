@@ -259,6 +259,15 @@ class GeneratorApp(tk.Tk):
             if not candidate.is_file():
                 continue
             self._post("log",f"Checking Gradle: {candidate}")
+            # On Windows, a known standard installation path is authoritative.
+            # This avoids false "unknown version" results from .bat probing.
+            normalized=str(candidate).replace("\\","/").lower()
+            if os.name=="nt" and normalized in (
+                "c:/gradle-8.13/bin/gradle.bat",
+                "c:/gradle-8.13/bin/gradle"
+            ):
+                self._post("log",f"Gradle 8.13 lokal ditemukan: {candidate}")
+                return str(candidate)
             version=self._gradle_version(str(candidate))
             if version==required:
                 return str(candidate)
