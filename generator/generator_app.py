@@ -223,6 +223,7 @@ class GeneratorApp(tk.Tk):
                 if value:
                     roots.append(Path(value))
             roots.extend([Path("C:/Gradle"),Path("C:/gradle"),Path("C:/")])
+            candidates.extend([Path("C:/gradle-8.13/bin/gradle.bat"),Path("C:/gradle-8.13/bin/gradle")])
 
             for root in roots:
                 if not root.exists():
@@ -243,9 +244,11 @@ class GeneratorApp(tk.Tk):
     def _find_compatible_gradle(self):
         required=GRADLE_VERSION
         incompatible=[]
+        self._post("log","Checking local Gradle installations...")
         for candidate in self._gradle_candidates():
             if not candidate.is_file():
                 continue
+            self._post("log",f"Checking Gradle: {candidate}")
             version=self._gradle_version(str(candidate))
             if version==required:
                 return str(candidate)
@@ -293,6 +296,11 @@ class GeneratorApp(tk.Tk):
     def _bootstrap_gradle(self):
         cache_root=Path(os.environ.get("LOCALAPPDATA",str(Path.home()))) / "WebVIEW-Generator" / "gradle"
         install_dir=cache_root/f"gradle-{GRADLE_VERSION}"
+        if os.name=="nt":
+            local_executable=Path(f"C:/gradle-{GRADLE_VERSION}/bin/gradle.bat")
+            if local_executable.exists() and self._gradle_version(str(local_executable))==GRADLE_VERSION:
+                self._post("log",f"Using local Gradle {GRADLE_VERSION}: {local_executable}")
+                return str(local_executable)
         executable=install_dir/"bin"/("gradle.bat" if os.name=="nt" else "gradle")
         if executable.exists():
             version=self._gradle_version(str(executable))
