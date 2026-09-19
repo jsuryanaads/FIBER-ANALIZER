@@ -1,1 +1,0 @@
-# WebVIEW-Generator generated application.
