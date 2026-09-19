@@ -151,9 +151,54 @@ class GeneratorApp(tk.Tk):
         if code!=0: raise RuntimeError("Generator gagal. Lihat Build Console untuk detail.")
         self.last_project=output; self._post("log",f"PROJECT READY: {output}"); return output
 
+    def _java17_home(self):
+        candidates=[]
+        java_home=os.environ.get("JAVA_HOME","").strip()
+        if java_home:
+            candidates.append(Path(java_home))
+        if os.name=="nt":
+            candidates.extend([
+                Path("C:/jdk-17.0.12"),
+                Path("C:/Program Files/Java/jdk-17"),
+                Path("C:/Program Files/Android/Android Studio/jbr"),
+                Path("C:/Program Files/Android/Android Studio/jdk"),
+            ])
+            for root_name in ("ProgramFiles","ProgramFiles(x86)","LOCALAPPDATA"):
+                root=os.environ.get(root_name)
+                if root:
+                    candidates.append(Path(root)/"Java")
+        seen=set()
+        for home in candidates:
+            key=str(home).lower()
+            if key in seen or not home.is_dir():
+                continue
+            seen.add(key)
+            java=home/"bin"/("java.exe" if os.name=="nt" else "java")
+            if not java.exists():
+                continue
+            try:
+                result=subprocess.run([str(java),"-version"],text=True,capture_output=True,timeout=15)
+                output=(result.stdout or "")+"\\n"+(result.stderr or "")
+                if re.search(r'version "17(?:[.\\-]|$)',output):
+                    return str(home)
+            except Exception:
+                pass
+        return None
+
+    def _process_env(self):
+        env=os.environ.copy()
+        jdk17=self._java17_home()
+        if jdk17:
+            env["JAVA_HOME"]=jdk17
+            env["PATH"]=str(Path(jdk17)/"bin")+os.pathsep+env.get("PATH","")
+            self._post("log",f"JDK 17 digunakan untuk Android build: {jdk17}")
+        else:
+            self._post("log","JDK 17 tidak ditemukan; build akan menggunakan JAVA_HOME/PATH yang tersedia.")
+        return env
+
     def _gradle_version(self,executable):
         try:
-            result=subprocess.run([executable,"--version"],text=True,capture_output=True,timeout=30)
+            result=subprocess.run([executable,"--version"],text=True,capture_output=True,timeout=30,env=self._process_env())
             output=(result.stdout or "")+"\\n"+(result.stderr or "")
             match=re.search(r"Gradle\\s+(\\d+\\.\\d+(?:\\.\\d+)?)",output,re.I)
             return match.group(1) if match else None
@@ -177,7 +222,7 @@ class GeneratorApp(tk.Tk):
                 value=os.environ.get(env_name)
                 if value:
                     roots.append(Path(value))
-            roots.extend([Path("C:/Gradle"),Path("C:/gradle")])
+            roots.extend([Path("C:/Gradle"),Path("C:/gradle"),Path("C:/")])
 
             for root in roots:
                 if not root.exists():
@@ -228,7 +273,7 @@ class GeneratorApp(tk.Tk):
 
         result=subprocess.run(
             [gradle,"wrapper",f"--gradle-version={GRADLE_VERSION}","--distribution-type=bin"],
-            cwd=project,text=True,capture_output=True
+            cwd=project,text=True,capture_output=True,env=self._process_env()
         )
         if result.stdout: self._post("log",result.stdout.rstrip())
         if result.stderr: self._post("log",result.stderr.rstrip())
@@ -274,7 +319,7 @@ class GeneratorApp(tk.Tk):
     def _build(self,kind):
         project=self._generate(); task={"debug":"assembleDebug","release":"assembleRelease","bundle":"bundleRelease"}[kind]
         self._post("log",f"BUILD START: {task}")
-        p=subprocess.Popen(self._gradle_command(project)+[task,"--no-daemon","--stacktrace"],cwd=project,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,bufsize=1)
+        p=subprocess.Popen(self._gradle_command(project)+[task,"--no-daemon","--stacktrace"],cwd=project,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,bufsize=1,env=self._process_env())
         for line in p.stdout or []: self._post("log",line.rstrip())
         code=p.wait()
         if code!=0: raise RuntimeError(f"Gradle build gagal (exit code {code}).")
