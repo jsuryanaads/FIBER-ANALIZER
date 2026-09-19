@@ -59,7 +59,7 @@ function showAuth(error="",register=false){
     try{
       const profile=await loadProfile();
       if(!profile||!profile.active)throw new Error("Akun belum diaktifkan atau profil organisasi belum tersedia.");
-      if(profile.role!==role){await supabase.auth.signOut();return showAuth("Akun ini terdaftar sebagai "+portalLabel(profile.role)+". Gunakan portal /"+profile.role.toLowerCase()+"/login.");}
+      if(profile.role!==role){await supabase.auth.signOut();return showAuth("Akun ini terdaftar sebagai "+portalLabel(profile.role)+". Gunakan portal yang sesuai.");}
       location.href="/";
     }catch(err){await supabase.auth.signOut();showAuth(err.message)}
   };
@@ -68,6 +68,10 @@ function showAuth(error="",register=false){
 async function initAuth(){
   try{await loadProfile()}catch(err){showAuth("Koneksi autentikasi gagal: "+err.message);return false}
   if(!currentProfile){$("authScreen").style.display="grid";showAuth();return false}
+  const orgKey="fiber-analyzer-org-"+currentProfile.organization_id;
+  db=JSON.parse(localStorage.getItem(orgKey)||"null")||emptyDb();
+  db.assets=db.assets||[];db.cables=db.cables||[];db.cores=db.cores||[];db.coreConnections=db.coreConnections||[];db.splitterOutputs=db.splitterOutputs||[];db.links=db.links||[];db.logicalLinks=db.logicalLinks||[];db.splices=db.splices||[];db.splitters=db.splitters||[];db.splitterConnections=db.splitterConnections||[];
+  migrateLegacyTopology();normalizeOltPorts();normalizeDb();
   $("authScreen").style.display="none";
   $("userName").textContent=currentProfile.name||currentUser.email;
   $("userRole").textContent=currentProfile.role;
@@ -149,7 +153,7 @@ function normalizeDb(){
 function normalizeOltPorts(){for(const a of db.assets.filter(x=>x.type==="OLT")){const n=Math.max(1,Number(a.port_count)||16);a.port_count=n;a.olt_ports=Array.from({length:n},(_,i)=>a.olt_ports?.[i]||({port_number:i+1,code:`${a.code}-P${i+1}`,status:"AVAILABLE"}))}}
 normalizeOltPorts();
 normalizeDb();
-const save=()=>localStorage.setItem(KEY,JSON.stringify(db));
+const save=()=>localStorage.setItem((currentProfile?"fiber-analyzer-org-"+currentProfile.organization_id:KEY),JSON.stringify(db));
 function wireNavigation(){document.querySelectorAll("[data-scroll]").forEach(b=>b.onclick=()=>document.querySelector(b.dataset.scroll)?.scrollIntoView({behavior:"smooth",block:"start"}));document.querySelectorAll(".sidebar nav a[href]").forEach(a=>a.onclick=()=>{document.querySelectorAll(".sidebar nav a").forEach(x=>x.classList.remove("active"));a.classList.add("active")})}
 
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
