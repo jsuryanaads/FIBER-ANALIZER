@@ -3,7 +3,7 @@ export function buildGraph(db){
  const add=(a,b,meta={})=>{if(!nodes.has(a)||!nodes.has(b))return;if(!adj.has(a))adj.set(a,[]);if(!adj.has(b))adj.set(b,[]);adj.get(a).push({to:b,...meta});adj.get(b).push({to:a,...meta});};
  for(const c of db.cables||[])add(c.from,c.to,{kind:"CABLE",cableId:c.id});
  for(const s of db.splices||[])add(s.from,s.to,{kind:"SPLICE",spliceId:s.id,inputCoreId:s.input_core_id,outputCoreId:s.output_core_id});
- for(const l of db.links||[])add(l.from,l.to,{kind:l.kind||"LINK",linkId:l.id,coreId:l.core_id});
+ for(const l of [...(db.links||[]),...(db.logicalLinks||[])])add(l.from,l.to,{kind:l.kind||"LINK",linkId:l.id,coreId:l.core_id});
  return {nodes,adj};
 }
 export function shortestTrace(db,startId,targetId){
