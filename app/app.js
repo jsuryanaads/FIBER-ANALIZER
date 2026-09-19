@@ -28,7 +28,7 @@ cables:[
 {id:"cab-odcodp-odc",code:"KBL-ODC-ODP01-ODC01-12C",fiber_count:12,length_m:80,from:"odc-odp-1",to:"odc-1",status:"ACTIVE"},
 {id:"cab-odc-odp",code:"KBL-ODC01-ODP01-12C",fiber_count:12,length_m:300,from:"odc-1",to:"odp-1",status:"ACTIVE"}],
 cores:[
-{id:"core-1",cable_id:"cab-oltpon-otb",core_number:1,status:"IN_USE"},
+{id:"core-1",cable_id:"cab-olt1p1-otb",core_number:1,status:"IN_USE"},
 {id:"core-2",cable_id:"cab-otb-jb1",core_number:2,status:"IN_USE"},
 {id:"core-3",cable_id:"cab-jb1-jb2",core_number:1,status:"IN_USE"},
 {id:"core-4",cable_id:"cab-jb1-jb3",core_number:2,status:"IN_USE"},
@@ -39,7 +39,7 @@ cores:[
 {id:"core-8",cable_id:"cab-odc-odp",core_number:2,status:"IN_USE"}],
 splitters:[{id:"sp-odcodp-1",nodeId:"odc-odp-1",ratio:"1:4",stage:1,inputType:"CORE",inputCableId:"cab-jb2-odcodp",inputCoreId:"core-5"},{id:"sp-odcodp-2",nodeId:"odc-odp-1",ratio:"1:4",stage:2,inputType:"SPLITTER",inputSplitterId:"sp-odcodp-1",inputPort:1,inputCoreId:"core-5"},{id:"sp-odcodp-3",nodeId:"odc-odp-1",ratio:"1:4",stage:3,inputType:"SPLITTER",inputSplitterId:"sp-odcodp-2",inputPort:4,inputCoreId:"core-5"},{id:"sp-odc-1",nodeId:"odc-1",ratio:"1:4",stage:1},{id:"sp-odc-2",nodeId:"odc-1",ratio:"1:4",stage:2},{id:"sp-odp-1",nodeId:"odp-1",ratio:"1:8",stage:1}],
 coreConnections:[
-{id:"cc-1",nodeId:"otb-1",inputCableId:"cab-oltpon-otb",inputCoreId:"core-1",outputCableId:"cab-otb-jb1",outputCoreId:"core-2",connectionType:"SPLICE",status:"ACTIVE"},
+{id:"cc-1",nodeId:"otb-1",inputCableId:"cab-olt1p1-otb",inputCoreId:"core-1",outputCableId:"cab-otb-jb1",outputCoreId:"core-2",connectionType:"SPLICE",status:"ACTIVE"},
 {id:"cc-2",nodeId:"jb-1",inputCableId:"cab-otb-jb1",inputCoreId:"core-2",outputCableId:"cab-jb1-jb2",outputCoreId:"core-3",connectionType:"SPLICE",status:"ACTIVE"},
 {id:"cc-3",nodeId:"jb-1",inputCableId:"cab-otb-jb1",inputCoreId:"core-2",outputCableId:"cab-jb1-jb3",outputCoreId:"core-4",connectionType:"SPLICE",status:"ACTIVE"},
 {id:"cc-4",nodeId:"jb-2",inputCableId:"cab-jb1-jb2",inputCoreId:"core-3",outputCableId:"cab-jb2-odcodp",outputCoreId:"core-5",connectionType:"SPLICE",status:"ACTIVE"},
