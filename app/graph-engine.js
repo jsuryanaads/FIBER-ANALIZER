@@ -17,7 +17,7 @@ export function shortestTrace(db,startId,targetId){
 export function validateGraph(db){
  const errors=[],assets=db.assets||[],ids=new Set(assets.map(a=>a.id)),assetById=new Map(assets.map(a=>[a.id,a])),cableById=new Map((db.cables||[]).map(c=>[c.id,c])),coreById=new Map(),keys=new Set();
  const portCount=a=>Math.max(1,Number(a?.port_count)||(a?.type==="OLT"?16:1));
- const validatePort=(c,nodeId,port,side)=>{const n=assetById.get(nodeId),p=Number(port);if(!Number.isInteger(p)||p<1)errors.push("Cable "+c.code+": "+side+" port must be an integer >= 1");else if(p>portCount(n))errors.push("Cable "+c.code+": "+side+" port "+p+" exceeds "+portCount(n)+" ports on "+(n?.code||nodeId));};
+ const validatePort=(c,nodeId,port,side)=>{const n=assetById.get(nodeId),p=Number(port==null?1:port);if(!Number.isInteger(p)||p<1)errors.push("Cable "+c.code+": "+side+" port must be an integer >= 1");else if(p>portCount(n))errors.push("Cable "+c.code+": "+side+" port "+p+" exceeds "+portCount(n)+" ports on "+(n?.code||nodeId));};
  for(const c of db.cables||[]){
   if(!ids.has(c.from)||!ids.has(c.to))errors.push("Cable "+c.code+": endpoint missing");
   if(c.from===c.to)errors.push("Cable "+c.code+": self-loop");
