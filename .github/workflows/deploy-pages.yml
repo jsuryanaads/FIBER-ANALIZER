@@ -32,10 +32,25 @@ jobs:
           node-version: 22
       - run: npm test
 
-      - name: Prepare static site
+      - name: Prepare Supabase configuration
+        env:
+          SUPABASE_URL_SECRET: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_URL_VAR: ${{ vars.SUPABASE_URL }}
+          SUPABASE_KEY_SECRET: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_KEY_VAR: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
         run: |
+          set -euo pipefail
+          URL="${SUPABASE_URL_SECRET:-}"
+          KEY="${SUPABASE_KEY_SECRET:-}"
+          if [ -z "$URL" ]; then URL="${SUPABASE_URL_VAR:-}"; fi
+          if [ -z "$KEY" ]; then KEY="${SUPABASE_KEY_VAR:-}"; fi
+          if [ -z "$URL" ] || [ -z "$KEY" ]; then
+            echo "Supabase configuration is missing. Expected SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY as GitHub Secrets or Variables."
+            exit 1
+          fi
           mkdir -p _site
           cp -R app/. _site/
+          printf 'export const SUPABASE_URL=%q;\nexport const SUPABASE_PUBLISHABLE_KEY=%q;\n' "$URL" "$KEY" > _site/supabase-config.js
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
