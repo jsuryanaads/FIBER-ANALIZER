@@ -27,3 +27,6 @@ See:
 ## Engineering rule
 
 Do not hard-code vendor-specific optical loss values or network assumptions into the core data model. Keep engineering parameters configurable and preserve calculation inputs for auditability.
+
+
+Deployment: GitHub Pages via `.github/workflows/deploy-pages.yml`.
