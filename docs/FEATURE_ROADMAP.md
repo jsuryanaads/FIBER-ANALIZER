@@ -1,7 +1,7 @@
 # FIBER-ANALYZER — Feature Roadmap
 
 ## Phase 0 — Repository foundation
-- [x] Define canonical topology: OLT → PON → JB → ODC → ODP
+- [x] Define canonical topology: OLT → OLT Port → OTB → JB → ODC-ODP → ODC → ODP → Customer
 - [x] Define fiber/cable as first-class resources
 - [x] Define core/port/splice model
 - [x] Define optical-analysis requirements
@@ -11,31 +11,33 @@
 - [ ] Add architecture documentation
 
 ## Phase 1 — Network inventory
-- [ ] OLT CRUD
-- [ ] PON CRUD and OLT relationship
-- [ ] JB CRUD
-- [ ] ODC CRUD
-- [ ] ODP CRUD
+- [x] OLT CRUD
+- [x] OTB CRUD
+- [x] JB CRUD
+- [x] ODC-ODP CRUD
+- [x] ODC CRUD
+- [x] ODP CRUD
+- [x] Customer CRUD
 - [ ] location/GPS
-- [ ] cable inventory
-- [ ] cable core inventory
-- [ ] port inventory
-- [ ] asset status/condition
+- [x] cable inventory
+- [x] cable core inventory
+- [x] port inventory
+- [x] asset status/condition
 
 ## Phase 2 — Connectivity and trace
-- [ ] cable endpoint mapping
-- [ ] core assignment
-- [ ] splice management
-- [ ] termination management
-- [ ] topology validation
-- [ ] forward trace
+- [x] cable endpoint mapping
+- [x] core assignment
+- [x] splice management
+- [x] termination management
+- [x] topology validation
+- [x] forward trace
 - [ ] reverse trace
 - [ ] customer impact trace
 - [ ] free-core/capacity analysis
 
 ## Phase 3 — Fiber analyzer
-- [ ] loss-budget calculator
-- [ ] splitter calculator
+- [x] loss-budget calculator
+- [x] splitter calculator
 - [ ] wavelength-aware calculations
 - [ ] measured-vs-calculated comparison
 - [ ] OTDR test records
