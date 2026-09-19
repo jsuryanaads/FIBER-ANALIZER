@@ -2,11 +2,24 @@
 
 ## Design principle
 
-Separate **network assets**, **physical connectivity**, **logical service connectivity**, and **measurements**. A cable is not a node; it is a physical segment connecting two network locations.
+The topology is a **flexible graph**, not a fixed OLT → JB → ODC → ODP chain. Every supported network node may connect to any other supported node when that physical route exists.
+
+Canonical UI node types:
+- OLT_PON
+- OTB
+- JB
+- ODC_ODP
+- ODC
+- ODP
+- CUSTOMER
+
+Examples of valid physical relationships include JB → JB, JB → ODC_ODP, JB → ODC, JB → ODP, ODC_ODP → JB, ODC → JB, ODP → JB, and other combinations. The database must not reject a connection solely because of node type ordering.
+
+A cable is a physical segment connecting two nodes. Each cable has its own fiber capacity (for example 12C, 24C, 48C) and individual cores. At any node, a core continuity mapping may connect an input cable/core to a different output cable/core. Core numbers therefore may change between cable segments, and multiple mappings at the same node provide branching.
 
 ## Primary entities
 
-### olt
+### olt / pon
 - id
 - code
 - name
@@ -20,7 +33,7 @@ Separate **network assets**, **physical connectivity**, **logical service connec
 - created_at
 - updated_at
 
-### pon
+### olt_pon logical details
 - id
 - olt_id
 - slot
@@ -33,7 +46,7 @@ Separate **network assets**, **physical connectivity**, **logical service connec
 
 Unique logical identity should normally be: olt_id + slot + port.
 
-### jb
+### otb / jb / odc_odp / odc / odp / customer nodes
 - id
 - code
 - name
@@ -137,8 +150,7 @@ A splice maps one core to another core. It must not be represented only as a tex
 ### service_path
 Represents the logical route used by a customer/service. It should be derivable from the topology but may be materialized for fast reads.
 
-Recommended path:
-PON → JB → ODC → ODP → Customer
+No fixed path is required. A service path is derived from the actual graph and core continuity mappings.
 
 ### test_record
 - id
@@ -210,9 +222,7 @@ Supported test types:
 
 ## Relationship summary
 
-OLT 1—N PON
-
-PON → JB → ODC → ODP → Customer is the canonical logical service topology.
+All supported node types participate in a many-to-many physical topology through cables. OLT/PON may be the source of a service, but intermediate node ordering is not constrained.
 
 Cable N—1 origin node and N—1 destination node.
 
