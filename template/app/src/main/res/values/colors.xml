@@ -1,5 +1,0 @@
-<resources>
-    <color name="webview_primary">__PRIMARY_COLOR__</color>
-    <color name="webview_splash">__SPLASH_COLOR__</color>
-    <color name="webview_background">#FFFFFF</color>
-</resources>
