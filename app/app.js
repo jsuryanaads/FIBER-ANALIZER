@@ -167,7 +167,9 @@ $("resetDemo").onclick=()=>{if(confirm("Reset seluruh data demo di browser?")){d
 render();
 function renderOpticalAnalyzer(){
   const wavelength=Number($("optWavelength")?.value||1310);
-  const attenuation=Math.max(0,Number($("optAttenuation")?.value||0));
+  const wavelengthDefaults={1310:0.35,1490:0.30,1550:0.22};
+  const selectedAttenuation=Math.max(0,Number($("optAttenuation")?.value||wavelengthDefaults[wavelength]||0));
+  const attenuation=selectedAttenuation;
   const connectorCount=Math.max(0,Number($("optConnectorCount")?.value||0));
   const connectorLoss=Math.max(0,Number($("optConnectorLoss")?.value||0));
   const spliceLoss=Math.max(0,Number($("optSpliceLoss")?.value||0));
