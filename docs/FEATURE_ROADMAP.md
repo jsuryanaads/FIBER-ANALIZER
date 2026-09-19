@@ -38,7 +38,7 @@
 ## Phase 3 — Fiber analyzer
 - [x] loss-budget calculator
 - [x] splitter calculator
-- [ ] wavelength-aware calculations
+- [x] wavelength-aware calculations
 - [ ] measured-vs-calculated comparison
 - [ ] OTDR test records
 - [ ] OPM test records
