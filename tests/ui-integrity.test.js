@@ -6,6 +6,8 @@ const dynamicAuthIds=new Set(["setupForm","setupUser","setupName","setupPass","s
 const missing=[...new Set(ids)].filter(id=>!dynamicAuthIds.has(id)&&!new RegExp(`(?:id|name)=["\x27]${id}["\x27]`).test(html));
 if(missing.length)throw new Error("UI IDs missing from index.html: "+missing.join(", "));
 if(!html.includes('src="./app.js"'))throw new Error("app.js is not loaded");
+if(!html.includes('<base href="/FIBER-ANALIZER/">'))throw new Error("GitHub Pages base path missing");
+if(!js.includes('const APP_BASE="/FIBER-ANALIZER"'))throw new Error("GitHub Pages route base missing");
 if(!html.includes('id="connectionList"'))throw new Error("Core connection UI missing");
 if(!html.includes('id="oltPorts"'))throw new Error("OLT port inventory UI missing");
 if(!js.includes("function renderOltPorts()"))throw new Error("OLT port renderer missing");
