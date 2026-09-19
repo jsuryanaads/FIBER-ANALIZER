@@ -1,5 +1,5 @@
 -- FIBER-ANALIZER Phase 1
--- Canonical topology: OLT -> PON -> JB -> ODC -> ODP -> Customer
+-- Flexible graph topology: all supported network nodes may connect to any other supported node.
 -- PostgreSQL-compatible foundation schema.
 
 create extension if not exists pgcrypto;
@@ -8,7 +8,7 @@ create type asset_status as enum ('ACTIVE','INACTIVE','MAINTENANCE','RETIRED');
 create type core_status as enum ('AVAILABLE','RESERVED','IN_USE','DAMAGED','RETIRED');
 create type cable_status as enum ('PLANNED','ACTIVE','DAMAGED','RETIRED');
 create type customer_status as enum ('ACTIVE','SUSPENDED','DISCONNECTED','PROSPECT');
-create type node_type as enum ('OLT','JB','ODC','ODP');
+create type node_type as enum ('OLT_PON','OTB','JB','ODC_ODP','ODC','ODP','CUSTOMER');
 create type port_status as enum ('AVAILABLE','USED','RESERVED','FAULTY','RETIRED');
 
 create table locations (
@@ -104,13 +104,7 @@ create table network_nodes (
   jb_id uuid unique references jbs(id) on delete restrict,
   odc_id uuid unique references odcs(id) on delete restrict,
   odp_id uuid unique references odps(id) on delete restrict,
-  created_at timestamptz not null default now(),
-  check (
-    (node_type='OLT' and olt_id is not null and jb_id is null and odc_id is null and odp_id is null) or
-    (node_type='JB' and olt_id is null and jb_id is not null and odc_id is null and odp_id is null) or
-    (node_type='ODC' and olt_id is null and jb_id is null and odc_id is not null and odp_id is null) or
-    (node_type='ODP' and olt_id is null and jb_id is null and odc_id is null and odp_id is not null)
-  )
+  created_at timestamptz not null default now()
 );
 
 create table cables (
@@ -209,6 +203,6 @@ create index idx_splices_input on splices(input_core_id);
 create index idx_splices_output on splices(output_core_id);
 create index idx_service_paths_pon on service_paths(pon_id);
 
-comment on table network_nodes is 'Normalized node abstraction used by physical cable endpoints. Canonical service topology remains OLT -> PON -> JB -> ODC -> ODP -> Customer.';
+comment on table network_nodes is 'Normalized node abstraction. Cable endpoints are unrestricted by node-type ordering; topology is a flexible graph.';
 comment on table cables is 'Physical fiber cable segment. Cable cores are first-class resources.';
 comment on table cable_cores is 'Individual optical fiber cores and their utilization state.';
