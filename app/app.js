@@ -2,51 +2,6 @@ import {shortestTrace,coreTrace,validateGraph} from "./graph-engine.js";
 const KEY="fiber-analyzer-flex-v3";
 const topology=["OLT","OTB","JB","ODC_ODP","ODC","ODP","CUSTOMER"];
 const typeLabel=t=>({OLT:"OLT",OTB:"OTB",JB:"JB",ODC_ODP:"BOX ODC-ODP",ODC:"BOX ODC",ODP:"BOX ODP",CUSTOMER:"PELANGGAN"}[t]||t);
-const seed={assets:[
-{id:"olt-1",type:"OLT",code:"OLT-01",name:"OLT Utama",status:"ACTIVE",port_count:16},
-{id:"otb-1",type:"OTB",code:"OTB-01",name:"Optical Termination Box 01",status:"ACTIVE"},
-{id:"jb-1",type:"JB",code:"JB-01",name:"Joint Box 01",status:"ACTIVE"},
-{id:"jb-2",type:"JB",code:"JB-02",name:"Joint Box 02",status:"ACTIVE"},
-{id:"jb-3",type:"JB",code:"JB-03",name:"Joint Box 03",status:"ACTIVE"},
-{id:"odc-odp-1",type:"ODC_ODP",code:"ODC-ODP-01",name:"Distribusi ODC-ODP 01",status:"ACTIVE"},
-{id:"odc-1",type:"ODC",code:"ODC-01",name:"ODC 01",status:"ACTIVE"},
-{id:"odp-1",type:"ODP",code:"ODP-01",name:"ODP 01",status:"ACTIVE"},
-{id:"c-1",type:"CUSTOMER",code:"CUST-001",name:"Pelanggan Demo",status:"ACTIVE"}],
-links:[{id:"svc-1",from:"odp-1",to:"c-1",kind:"SERVICE"}],
-logicalLinks:[],
-splices:[],
-splitterOutputs:[{id:"so-1",nodeId:"odc-odp-1",splitterId:"sp-odcodp-3",outputPort:1,cableId:"cab-odcodp-odc",coreId:"core-9"}],
-splitterConnections:[{id:"sc-1",nodeId:"odc-odp-1",fromSplitterId:"sp-odcodp-1",fromPort:1,toSplitterId:"sp-odcodp-2",toPort:"INPUT"},{id:"sc-2",nodeId:"odc-odp-1",fromSplitterId:"sp-odcodp-2",fromPort:4,toSplitterId:"sp-odcodp-3",toPort:"INPUT"}],
-cables:[
-{id:"cab-olt1p1-otb",code:"KBL-OLT01-P1-OTB01-24C",fiber_count:24,length_m:900,from:"olt-1",to:"otb-1",fromPort:1,toPort:1,status:"ACTIVE"},
-{id:"cab-otb-jb1",code:"KBL-OTB-JB01-24C",fiber_count:24,length_m:120,from:"otb-1",to:"jb-1",status:"ACTIVE"},
-{id:"cab-jb1-jb2",code:"KBL-JB01-JB02-24C",fiber_count:24,length_m:600,from:"jb-1",to:"jb-2",status:"ACTIVE"},
-{id:"cab-jb1-jb3",code:"KBL-JB01-JB03-12C",fiber_count:12,length_m:450,from:"jb-1",to:"jb-3",status:"ACTIVE"},
-{id:"cab-jb2-odcodp",code:"KBL-JB02-ODC-ODP01-48C",fiber_count:48,length_m:700,from:"jb-2",to:"odc-odp-1",status:"ACTIVE"},
-{id:"cab-jb3-odc",code:"KBL-JB03-ODC01-24C",fiber_count:24,length_m:650,from:"jb-3",to:"odc-1",status:"ACTIVE"},
-{id:"cab-odcodp-jb2",code:"KBL-ODC-ODP01-JB02-12C",fiber_count:12,length_m:300,from:"odc-odp-1",to:"jb-2",status:"ACTIVE"},
-{id:"cab-odcodp-odc",code:"KBL-ODC-ODP01-ODC01-12C",fiber_count:12,length_m:80,from:"odc-odp-1",to:"odc-1",status:"ACTIVE"},
-{id:"cab-odc-odp",code:"KBL-ODC01-ODP01-12C",fiber_count:12,length_m:300,from:"odc-1",to:"odp-1",status:"ACTIVE"}],
-cores:[
-{id:"core-1",cable_id:"cab-olt1p1-otb",core_number:1,status:"IN_USE"},
-{id:"core-2",cable_id:"cab-otb-jb1",core_number:2,status:"IN_USE"},
-{id:"core-3",cable_id:"cab-jb1-jb2",core_number:1,status:"IN_USE"},
-{id:"core-4",cable_id:"cab-jb1-jb3",core_number:2,status:"IN_USE"},
-{id:"core-5",cable_id:"cab-jb2-odcodp",core_number:7,status:"IN_USE"},
-{id:"core-6",cable_id:"cab-jb3-odc",core_number:4,status:"IN_USE"},
-{id:"core-7",cable_id:"cab-odcodp-jb2",core_number:3,status:"IN_USE"},
-{id:"core-9",cable_id:"cab-odcodp-odc",core_number:1,status:"IN_USE"},
-{id:"core-8",cable_id:"cab-odc-odp",core_number:2,status:"IN_USE"}],
-splitters:[{id:"sp-odcodp-1",nodeId:"odc-odp-1",ratio:"1:4",stage:1,inputType:"CORE",inputCableId:"cab-jb2-odcodp",inputCoreId:"core-5"},{id:"sp-odcodp-2",nodeId:"odc-odp-1",ratio:"1:4",stage:2,inputType:"SPLITTER",inputSplitterId:"sp-odcodp-1",inputPort:1,inputCoreId:"core-5"},{id:"sp-odcodp-3",nodeId:"odc-odp-1",ratio:"1:4",stage:3,inputType:"SPLITTER",inputSplitterId:"sp-odcodp-2",inputPort:4,inputCoreId:"core-5"},{id:"sp-odc-1",nodeId:"odc-1",ratio:"1:4",stage:1},{id:"sp-odc-2",nodeId:"odc-1",ratio:"1:4",stage:2},{id:"sp-odp-1",nodeId:"odp-1",ratio:"1:8",stage:1}],
-coreConnections:[
-{id:"cc-1",nodeId:"otb-1",inputCableId:"cab-olt1p1-otb",inputCoreId:"core-1",outputCableId:"cab-otb-jb1",outputCoreId:"core-2",connectionType:"SPLICE",status:"ACTIVE"},
-{id:"cc-2",nodeId:"jb-1",inputCableId:"cab-otb-jb1",inputCoreId:"core-2",outputCableId:"cab-jb1-jb2",outputCoreId:"core-3",connectionType:"SPLICE",status:"ACTIVE"},
-{id:"cc-3",nodeId:"jb-1",inputCableId:"cab-otb-jb1",inputCoreId:"core-2",outputCableId:"cab-jb1-jb3",outputCoreId:"core-4",connectionType:"SPLICE",status:"ACTIVE"},
-{id:"cc-4",nodeId:"jb-2",inputCableId:"cab-jb1-jb2",inputCoreId:"core-3",outputCableId:"cab-jb2-odcodp",outputCoreId:"core-5",connectionType:"SPLICE",status:"ACTIVE"},
-{id:"cc-5",nodeId:"jb-3",inputCableId:"cab-jb1-jb3",inputCoreId:"core-4",outputCableId:"cab-jb3-odc",outputCoreId:"core-6",connectionType:"SPLICE",status:"ACTIVE"},
-{id:"cc-6",nodeId:"odc-odp-1",inputCableId:"cab-jb2-odcodp",inputCoreId:"core-5",outputCableId:"cab-odcodp-jb2",outputCoreId:"core-7",connectionType:"SPLICE",status:"ACTIVE"},
-{id:"cc-7",nodeId:"odc-1",inputCableId:"cab-jb3-odc",inputCoreId:"core-6",outputCableId:"cab-odc-odp",outputCoreId:"core-8",connectionType:"SPLICE",status:"ACTIVE"}
-]};
 const emptyDb=()=>({assets:[],links:[],logicalLinks:[],splices:[],splitterOutputs:[],splitterConnections:[],cables:[],cores:[],splitters:[],coreConnections:[]});
 let db=JSON.parse(localStorage.getItem(KEY)||"null")||emptyDb();
 db.assets=db.assets||[];db.cables=db.cables||[];db.cores=db.cores||[];db.coreConnections=db.coreConnections||[];db.splitterOutputs=db.splitterOutputs||[];
