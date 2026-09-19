@@ -4,9 +4,11 @@
 
     <application
         android:allowBackup="true"
+        android:icon="@drawable/ic_launcher"
         android:label="__APP_NAME__"
+        android:roundIcon="@drawable/ic_launcher"
         android:supportsRtl="true"
-        android:theme="@style/Theme.WebViewGenerator">
+        android:theme="@style/Theme.WebViewGenerator.Starting">
 
         <activity
             android:name=".MainActivity"
