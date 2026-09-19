@@ -8,8 +8,8 @@ const db={
  logicalLinks:[],
  links:[{id:"service",from:"odp",to:"cust",kind:"SERVICE"}],
  cables:[
-  {id:"c1",code:"SRC-OTB-24C",from:"src",to:"otb",fiber_count:24,length_m:100},
-  {id:"c2",code:"OTB-JB1-12C",from:"otb",to:"jb1",fiber_count:12,length_m:50},
+  {id:"c1",code:"SRC-OTB-24C",from:"src",to:"otb",fromPort:1,toPort:1,fiber_count:24,length_m:100},
+  {id:"c2",code:"OTB-JB1-12C",from:"otb",to:"jb1",fromPort:1,toPort:1,fiber_count:12,length_m:50},
   {id:"c3",code:"JB1-JB2-48C",from:"jb1",to:"jb2",fiber_count:48,length_m:300},
   {id:"c4",code:"JB2-DIST-12C",from:"jb2",to:"dist",fiber_count:12,length_m:250},
   {id:"c5",code:"DIST-JB2-24C",from:"dist",to:"jb2",fiber_count:24,length_m:80},
@@ -43,7 +43,12 @@ if(mappings.length<3)throw new Error("Expected core mappings across selected fle
 if(!mappings.some(x=>x.inputCoreId==="k1"&&x.outputCoreId==="k2"))throw new Error("24C Core 1 -> 12C Core 2 failed");
 if(!db.coreConnections.some(x=>x.inputCoreId==="k2"&&x.outputCoreId==="k3"))throw new Error("12C -> 48C remap missing from topology");
 if(!mappings.some(x=>x.inputCoreId==="k2"&&x.outputCoreId==="k6"))throw new Error("JB branching to ODC failed");
+const firstCableStep=trace.steps.find(s=>s.kind==="CABLE"&&s.cableId==="c1");
+if(!firstCableStep||firstCableStep.fromPort!==1||firstCableStep.toPort!==1)throw new Error("OLT port-aware trace failed");
 if(!validateGraph(db).valid)throw new Error("Valid flexible graph rejected");
+const badPort=structuredClone(db);
+badPort.cables[0].fromPort=17;
+if(validateGraph(badPort).valid)throw new Error("Invalid OLT port accepted");
 
 const invalid=structuredClone(db);
 invalid.coreConnections[0].outputCoreId="k3";
