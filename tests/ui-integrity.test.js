@@ -27,6 +27,6 @@ if(!html.includes("id=\"userForm\""))throw new Error("User management form missi
 if(!js.includes("ROLE_PERMISSIONS")||!js.includes("user.manage"))throw new Error("RBAC permissions missing");
 if(!js.includes("supabase.auth.signInWithPassword"))throw new Error("Supabase login missing");
 if(!js.includes("supabase.auth.signUp"))throw new Error("Administrator registration missing");
-if(!js.includes("supabase.functions.invoke("admin-user""))throw new Error("Admin user invitation missing");
+if(!js.includes('supabase.functions.invoke("admin-user"'))throw new Error("Admin user invitation missing");
 if(!js.includes('"/admin/login"')||!js.includes('"/pengelola/login"')||!js.includes('"/teknisi/login"'))throw new Error("Role portal routes missing");
 console.log("RBAC UI integrity test passed");
