@@ -50,7 +50,7 @@ jobs:
           fi
           mkdir -p _site
           cp -R app/. _site/
-          printf 'export const SUPABASE_URL=%q;\nexport const SUPABASE_PUBLISHABLE_KEY=%q;\n' "$URL" "$KEY" > _site/supabase-config.js
+          SUPABASE_URL="$URL" SUPABASE_KEY="$KEY" node -e 'const fs=require("fs"); fs.writeFileSync("_site/supabase-config.js", `export const SUPABASE_URL=${JSON.stringify(process.env.SUPABASE_URL)};\\nexport const SUPABASE_PUBLISHABLE_KEY=${JSON.stringify(process.env.SUPABASE_KEY)};\\n`);'
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
