@@ -151,16 +151,80 @@ class GeneratorApp(tk.Tk):
         if code!=0: raise RuntimeError("Generator gagal. Lihat Build Console untuk detail.")
         self.last_project=output; self._post("log",f"PROJECT READY: {output}"); return output
 
+    def _gradle_version(self,executable):
+        try:
+            result=subprocess.run([executable,"--version"],text=True,capture_output=True,timeout=30)
+            output=(result.stdout or "")+"\\n"+(result.stderr or "")
+            match=re.search(r"Gradle\\s+(\\d+\\.\\d+(?:\\.\\d+)?)",output,re.I)
+            return match.group(1) if match else None
+        except Exception:
+            return None
+
+    def _gradle_candidates(self):
+        candidates=[]
+        gradle_home=os.environ.get("GRADLE_HOME","").strip()
+        if gradle_home:
+            candidates.append(Path(gradle_home)/"bin"/("gradle.bat" if os.name=="nt" else "gradle"))
+
+        for name in ("gradle","gradle.bat"):
+            found=shutil.which(name)
+            if found:
+                candidates.append(Path(found))
+
+        if os.name=="nt":
+            roots=[]
+            for env_name in ("USERPROFILE","LOCALAPPDATA","ProgramFiles","ProgramFiles(x86)"):
+                value=os.environ.get(env_name)
+                if value:
+                    roots.append(Path(value))
+            roots.extend([Path("C:/Gradle"),Path("C:/gradle")])
+
+            for root in roots:
+                if not root.exists():
+                    continue
+                try:
+                    for item in root.glob("gradle-*"):
+                        candidates.append(item/"bin"/"gradle.bat")
+                except OSError:
+                    pass
+
+        seen=set()
+        for candidate in candidates:
+            key=str(candidate).lower()
+            if key not in seen:
+                seen.add(key)
+                yield candidate
+
+    def _find_compatible_gradle(self):
+        required=GRADLE_VERSION
+        incompatible=[]
+        for candidate in self._gradle_candidates():
+            if not candidate.is_file():
+                continue
+            version=self._gradle_version(str(candidate))
+            if version==required:
+                return str(candidate)
+            if version:
+                incompatible.append((str(candidate),version))
+
+        if incompatible:
+            for path,version in incompatible:
+                self._post("log",f"Gradle ditemukan tetapi tidak kompatibel: {path} ({version}). Project membutuhkan Gradle {required}.")
+        return None
+
     def _gradle_command(self,project):
         wrapper=project/("gradlew.bat" if os.name=="nt" else "gradlew")
         if wrapper.exists():
             if os.name!="nt": wrapper.chmod(wrapper.stat().st_mode|0o111)
             return [str(wrapper)]
 
-        gradle=shutil.which("gradle") or shutil.which("gradle.bat")
-        if not gradle:
+        gradle=self._find_compatible_gradle()
+        if gradle:
+            self._post("log",f"Gradle kompatibel ditemukan: {gradle} (Gradle {GRADLE_VERSION})")
+        else:
+            self._post("log",f"Gradle {GRADLE_VERSION} tidak ditemukan. Menggunakan Gradle {GRADLE_VERSION} otomatis.")
             gradle=self._bootstrap_gradle()
-        self._post("log",f"Gradle: {gradle}")
+            self._post("log",f"Gradle bootstrap: {gradle}")
 
         result=subprocess.run(
             [gradle,"wrapper",f"--gradle-version={GRADLE_VERSION}","--distribution-type=bin"],
@@ -169,7 +233,13 @@ class GeneratorApp(tk.Tk):
         if result.stdout: self._post("log",result.stdout.rstrip())
         if result.stderr: self._post("log",result.stderr.rstrip())
         if result.returncode!=0:
-            raise RuntimeError("Gagal membuat Gradle wrapper. Pastikan JDK 17 tersedia dan project dapat dijalankan oleh Gradle.")
+            details=(result.stderr or result.stdout or "").strip()
+            raise RuntimeError(
+                "Gagal membuat Gradle wrapper. "
+                f"Gradle yang digunakan: {gradle}. "
+                "Pastikan JDK 17+ tersedia dan project dapat dijalankan oleh Gradle."
+                + (f"\\nDetail Gradle: {details[-2000:]}" if details else "")
+            )
         if not wrapper.exists():
             raise RuntimeError("Gradle wrapper tidak terbentuk setelah perintah Gradle selesai.")
         if os.name!="nt": wrapper.chmod(wrapper.stat().st_mode|0o111)
@@ -180,7 +250,10 @@ class GeneratorApp(tk.Tk):
         install_dir=cache_root/f"gradle-{GRADLE_VERSION}"
         executable=install_dir/"bin"/("gradle.bat" if os.name=="nt" else "gradle")
         if executable.exists():
-            return str(executable)
+            version=self._gradle_version(str(executable))
+            if version==GRADLE_VERSION:
+                return str(executable)
+            self._post("log",f"Cache Gradle tidak sesuai versi ({version or 'unknown'}), menyiapkan Gradle {GRADLE_VERSION} ulang.")
 
         cache_root.mkdir(parents=True,exist_ok=True)
         archive=cache_root/f"gradle-{GRADLE_VERSION}-bin.zip"
