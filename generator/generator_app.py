@@ -198,12 +198,22 @@ class GeneratorApp(tk.Tk):
 
     def _gradle_version(self,executable):
         try:
-            result=subprocess.run([executable,"--version"],text=True,capture_output=True,timeout=30,env=self._process_env())
+            env=self._process_env()
+            if os.name=="nt" and str(executable).lower().endswith((".bat",".cmd")):
+                command=["cmd.exe","/d","/c",str(executable),"--version"]
+            else:
+                command=[str(executable),"--version"]
+            result=subprocess.run(command,text=True,capture_output=True,timeout=30,env=env)
             output=(result.stdout or "")+"\\n"+(result.stderr or "")
-            match=re.search(r"Gradle\\s+(\\d+\\.\\d+(?:\\.\\d+)?)",output,re.I)
-            return match.group(1) if match else None
-        except Exception:
-            return None
+            match=re.search(r"Gradle\\s+([0-9]+\\.[0-9]+(?:\\.[0-9]+)?)",output,re.I)
+            if match:
+                return match.group(1)
+            self._post("log",f"Gagal membaca versi Gradle dari {executable} (exit {result.returncode}).")
+            if output.strip():
+                self._post("log",output.strip()[-1000:])
+        except Exception as exc:
+            self._post("log",f"Gagal memeriksa Gradle {executable}: {exc}")
+        return None
 
     def _gradle_candidates(self):
         candidates=[]
