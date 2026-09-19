@@ -32,6 +32,7 @@ cores:[
 {id:"core-6",cable_id:"cab-jb3-odc",core_number:4,status:"IN_USE"},
 {id:"core-7",cable_id:"cab-odcodp-jb2",core_number:3,status:"IN_USE"},
 {id:"core-8",cable_id:"cab-odc-odp",core_number:2,status:"IN_USE"}],
+splitters:[{id:"sp-odcodp-1",nodeId:"odc-odp-1",ratio:"1:4",stage:1},{id:"sp-odcodp-2",nodeId:"odc-odp-1",ratio:"1:8",stage:2},{id:"sp-odc-1",nodeId:"odc-1",ratio:"1:4",stage:1},{id:"sp-odc-2",nodeId:"odc-1",ratio:"1:4",stage:2},{id:"sp-odp-1",nodeId:"odp-1",ratio:"1:8",stage:1}],
 coreConnections:[
 {id:"cc-1",nodeId:"otb-1",inputCableId:"cab-oltpon-otb",inputCoreId:"core-1",outputCableId:"cab-otb-jb1",outputCoreId:"core-2",connectionType:"SPLICE",status:"ACTIVE"},
 {id:"cc-2",nodeId:"jb-1",inputCableId:"cab-otb-jb1",inputCoreId:"core-2",outputCableId:"cab-jb1-jb2",outputCoreId:"core-3",connectionType:"SPLICE",status:"ACTIVE"},
