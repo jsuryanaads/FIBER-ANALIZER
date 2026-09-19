@@ -48,7 +48,28 @@ coreConnections:[
 {id:"cc-7",nodeId:"odc-1",inputCableId:"cab-jb3-odc",inputCoreId:"core-6",outputCableId:"cab-odc-odp",outputCoreId:"core-8",connectionType:"SPLICE",status:"ACTIVE"}
 ]};
 let db=JSON.parse(localStorage.getItem(KEY)||"null")||structuredClone(seed);
-db.assets=db.assets||[];db.assets.forEach(a=>{if(a.type==="OLT_PON")a.type="OLT";a.port_count=Math.max(1,Number(a.port_count)||(a.type==="OLT"?16:1));if(a.type==="OLT")a.olt_ports=Array.from({length:a.port_count},(_,i)=>({port_number:i+1,code:`${a.code}-P${i+1}`,status:"AVAILABLE"}))});db.links=db.links||[];db.cables=db.cables||[];db.cables.forEach(c=>{c.fromPort=Math.max(1,Number(c.fromPort)||1);c.toPort=Math.max(1,Number(c.toPort)||1)});db.cores=db.cores||[];db.coreConnections=db.coreConnections||[];db.splitters=db.splitters||[];db.splitterConnections=db.splitterConnections||[];db.splitterOutputs=db.splitterOutputs||[];
+db.assets=db.assets||[];
+function migrateLegacyTopology(){
+  const legacyPonIds=new Set(db.assets.filter(a=>a.type==="OLT_PON"||a.type==="PON").map(a=>a.id));
+  const legacyObts=new Set(db.assets.filter(a=>a.type==="OBT").map(a=>a.id));
+  const olt=db.assets.find(a=>a.type==="OLT");
+  if(legacyPonIds.size&&olt){
+    db.cables.forEach(c=>{
+      if(legacyPonIds.has(c.from)) c.from=olt.id;
+      if(legacyPonIds.has(c.to)) c.to=olt.id;
+      if(legacyPonIds.has(c.from)) c.fromPort=Math.max(1,Number(c.fromPort)||1);
+    });
+  }
+  const removedNodeIds=new Set([...legacyPonIds,...legacyObts]);
+  db.assets=db.assets.filter(a=>!removedNodeIds.has(a.id));
+  db.cables=db.cables.filter(c=>c.from!==c.to&&!removedNodeIds.has(c.from)&&!removedNodeIds.has(c.to));
+  const cableIds=new Set(db.cables.map(c=>c.id));
+  db.cores=(db.cores||[]).filter(x=>cableIds.has(x.cable_id));
+  db.coreConnections=(db.coreConnections||[]).filter(x=>cableIds.has(x.inputCableId)&&cableIds.has(x.outputCableId));
+  db.splitterOutputs=(db.splitterOutputs||[]).filter(x=>cableIds.has(x.cableId));
+}
+migrateLegacyTopology();
+db.assets.forEach(a=>{if(a.type==="OLT_PON")a.type="OLT";a.port_count=Math.max(1,Number(a.port_count)||(a.type==="OLT"?16:1));if(a.type==="OLT")a.olt_ports=Array.from({length:a.port_count},(_,i)=>({port_number:i+1,code:`${a.code}-P${i+1}`,status:"AVAILABLE"}))});db.links=db.links||[];db.cables=db.cables||[];db.cables.forEach(c=>{c.fromPort=Math.max(1,Number(c.fromPort)||1);c.toPort=Math.max(1,Number(c.toPort)||1)});db.cores=db.cores||[];db.coreConnections=db.coreConnections||[];db.splitters=db.splitters||[];db.splitterConnections=db.splitterConnections||[];db.splitterOutputs=db.splitterOutputs||[];
 function normalizeDb(){
   const existing=new Map(db.cores.map(c=>[(c.cable_id||"")+":"+c.core_number,c]));
   for(const cable of db.cables){
