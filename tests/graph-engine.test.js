@@ -1,0 +1,3 @@
+import {shortestTrace,validateGraph} from "../app/graph-engine.js";
+const db={assets:[{id:"a",type:"OLT"},{id:"b",type:"PON"},{id:"c",type:"JB"},{id:"d",type:"ODP"},{id:"e",type:"CUSTOMER"}],cables:[{id:"c1",code:"C1",from:"b",to:"c",fiber_count:12,length_m:100},{id:"c2",code:"C2",from:"c",to:"d",fiber_count:12,length_m:200}],cores:[],links:[{id:"l1",from:"a",to:"b",kind:"PON_UPLINK"},{id:"l2",from:"d",to:"e",kind:"SERVICE"}],splices:[]};
+const r=shortestTrace(db,"a","e");if(!r.found||r.path.length!==5)throw new Error("Trace path failed");if(!validateGraph(db).valid)throw new Error("Valid graph rejected");console.log("graph-engine tests passed");
