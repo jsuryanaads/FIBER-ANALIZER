@@ -2,6 +2,7 @@ name: Desktop Generator Build
 on:
   workflow_dispatch:
   push:
+    branches: [main]
     tags:
       - "desktop-v*"
 permissions:
