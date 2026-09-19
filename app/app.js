@@ -2,15 +2,26 @@ import {shortestTrace,validateGraph} from "./graph-engine.js";
 const KEY="fiber-analyzer-flex-v1";
 const topology=["OLT","PON","JB","ODC","ODP","CUSTOMER"];
 const seed={assets:[
-{id:"olt-1",type:"OLT",code:"OLT-01",name:"OLT Pangandaran",status:"ACTIVE",incomingCableId:"",incomingCoreId:"",outgoingCableId:"",outgoingCoreId:""},
-{id:"pon-1",type:"PON",code:"PON-01/01",name:"Slot 1 Port 1",status:"ACTIVE",incomingCableId:"",incomingCoreId:"",outgoingCableId:"cab-1",outgoingCoreId:"core-1"},
-{id:"jb-1",type:"JB",code:"JB-001",name:"Joint Box 001",status:"ACTIVE",incomingCableId:"cab-1",incomingCoreId:"core-1",outgoingCableId:"cab-2",outgoingCoreId:"core-3"},
-{id:"odc-1",type:"ODC",code:"ODC-001",name:"ODC Pangandaran 001",status:"ACTIVE",incomingCableId:"cab-2",incomingCoreId:"core-3",outgoingCableId:"cab-3",outgoingCoreId:"core-5"},
-{id:"odp-1",type:"ODP",code:"ODP-001",name:"ODP Desa 001",status:"ACTIVE",incomingCableId:"cab-3",incomingCoreId:"core-5",outgoingCableId:"",outgoingCoreId:""},
-{id:"c-1",type:"CUSTOMER",code:"CUST-001",name:"Pelanggan Demo",status:"ACTIVE",incomingCableId:"",incomingCoreId:"",outgoingCableId:"",outgoingCoreId:""}],
-links:[{id:"pon-uplink",from:"olt-1",to:"pon-1",kind:"PON_UPLINK"},{id:"svc-1",from:"odp-1",to:"c-1",kind:"SERVICE",core_id:"core-5"}],splices:[],
-cables:[{id:"cab-1",code:"FDB-144C-001",fiber_count:144,length_m:1250,from:"pon-1",to:"jb-1",status:"ACTIVE"},{id:"cab-2",code:"FDD-48C-001",fiber_count:48,length_m:830,from:"jb-1",to:"odc-1",status:"ACTIVE"},{id:"cab-3",code:"FDD-24C-001",fiber_count:24,length_m:420,from:"odc-1",to:"odp-1",status:"ACTIVE"}],
-cores:[{id:"core-1",cable_id:"cab-1",core_number:1,status:"IN_USE"},{id:"core-2",cable_id:"cab-1",core_number:2,status:"AVAILABLE"},{id:"core-3",cable_id:"cab-2",core_number:1,status:"IN_USE"},{id:"core-4",cable_id:"cab-2",core_number:2,status:"AVAILABLE"},{id:"core-5",cable_id:"cab-3",core_number:1,status:"IN_USE"}]};
+{id:"olt-1",type:"OLT",code:"OLT-01",name:"OLT Utama",status:"ACTIVE"},
+{id:"jb-1",type:"JB",code:"JB-01",name:"Joint Box 01",status:"ACTIVE"},
+{id:"jb-2",type:"JB",code:"JB-02",name:"Joint Box 02",status:"ACTIVE"},
+{id:"jb-3",type:"JB",code:"JB-03",name:"Joint Box 03",status:"ACTIVE"},
+{id:"odc-1",type:"ODC",code:"ODC-01",name:"ODC Utama",status:"ACTIVE"},
+{id:"odp-1",type:"ODP",code:"ODP-01",name:"ODP 01",status:"ACTIVE"},
+{id:"c-1",type:"CUSTOMER",code:"CUST-001",name:"Pelanggan Demo",status:"ACTIVE"}],
+links:[{id:"svc-1",from:"odp-1",to:"c-1",kind:"SERVICE"}],splices:[],
+cables:[
+{id:"cab-olt-jb1",code:"KBL-OLT-JB01-24C",fiber_count:24,length_m:1000,from:"olt-1",to:"jb-1",status:"ACTIVE"},
+{id:"cab-jb1-jb2",code:"KBL-JB01-JB02-24C",fiber_count:24,length_m:600,from:"jb-1",to:"jb-2",status:"ACTIVE"},
+{id:"cab-jb1-jb3",code:"KBL-JB01-JB03-12C",fiber_count:12,length_m:450,from:"jb-1",to:"jb-3",status:"ACTIVE"},
+{id:"cab-jb2-odc",code:"KBL-JB02-ODC01-24C",fiber_count:24,length_m:700,from:"jb-2",to:"odc-1",status:"ACTIVE"},
+{id:"cab-odc-odp",code:"KBL-ODC01-ODP01-12C",fiber_count:12,length_m:300,from:"odc-1",to:"odp-1",status:"ACTIVE"}],
+cores:[
+{id:"core-1",cable_id:"cab-olt-jb1",core_number:1,status:"IN_USE"},
+{id:"core-2",cable_id:"cab-jb1-jb2",core_number:1,status:"IN_USE"},
+{id:"core-3",cable_id:"cab-jb1-jb3",core_number:1,status:"IN_USE"},
+{id:"core-4",cable_id:"cab-jb2-odc",core_number:1,status:"IN_USE"},
+{id:"core-5",cable_id:"cab-odc-odp",core_number:1,status:"IN_USE"}]};
 let db=JSON.parse(localStorage.getItem(KEY)||"null")||seed;
 const $=id=>document.getElementById(id), save=()=>localStorage.setItem(KEY,JSON.stringify(db));
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
