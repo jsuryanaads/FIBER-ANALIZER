@@ -7,6 +7,14 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+env:
+  GRADLE_VERSION: "8.13"
+  ANDROID_PLATFORM: "android-36"
+  ANDROID_BUILD_TOOLS: "36.0.0"
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -19,7 +27,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
           cache: gradle
 
       - name: Setup Android SDK
@@ -30,48 +38,86 @@ jobs:
       - name: Install Android SDK
         run: |
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+          sdkmanager "$ANDROID_PLATFORM" "$ANDROID_BUILD_TOOLS" "platform-tools"
 
       - name: Validate generator
         run: |
           python3 -m py_compile generator/generate.py
           python3 -m py_compile generator/generator_app.py
+          python3 generator/generate.py --help >/dev/null
 
       - name: Generate sample Android project
         run: |
-          python3 generator/generate.py             --url "https://example.com"             --name "WebVIEW Sample"             --package "com.jsuryana.webviewsample"             --version-name "1.0.0"             --version-code 1             --primary-color "#111827"             --splash-color "#0F172A"
+          python3 generator/generate.py \
+            --url "https://example.com" \
+            --name "WebVIEW Sample" \
+            --package "com.jsuryana.webviewsample" \
+            --version-name "1.0.0" \
+            --version-code 1 \
+            --primary-color "#111827" \
+            --splash-color "#0F172A"
 
-      - name: Verify generated branding and configuration
+      - name: Verify generated project
         working-directory: generated/webview-sample
         run: |
+          test -f settings.gradle.kts
+          test -f app/build.gradle.kts
+          test -f app/src/main/AndroidManifest.xml
+          test -f app/src/main/java/com/jsuryana/webviewsample/MainActivity.kt
+          test -f app/src/main/res/drawable/ic_launcher.xml
           grep -q 'versionCode = 1' app/build.gradle.kts
+          grep -q 'versionName = "1.0.0"' app/build.gradle.kts
           grep -q 'android:icon="@drawable/ic_launcher"' app/src/main/AndroidManifest.xml
           grep -q 'https://example.com' app/src/main/res/values/strings.xml
-          test -f app/src/main/res/drawable/ic_launcher.xml
+          grep -q '#111827' app/src/main/res/values/colors.xml
+          grep -q '#0F172A' app/src/main/res/values/colors.xml
 
-      - name: Install Gradle
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.13"
+
+      - name: Check Gradle toolchain
+        run: |
+          gradle --version
+          java -version
 
       - name: Generate Gradle wrapper
         working-directory: generated/webview-sample
-        run: gradle wrapper --gradle-version 8.13
+        run: gradle wrapper --gradle-version "$GRADLE_VERSION" --distribution-type bin
+
+      - name: Make Gradle wrapper executable
+        working-directory: generated/webview-sample
+        run: chmod +x gradlew
+
+      - name: Gradle configuration check
+        working-directory: generated/webview-sample
+        run: ./gradlew help --stacktrace
 
       - name: Build debug APK
         working-directory: generated/webview-sample
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
 
       - name: Build release APK
         working-directory: generated/webview-sample
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease --stacktrace --no-daemon
 
       - name: Build release AAB
         working-directory: generated/webview-sample
-        run: ./gradlew bundleRelease
+        run: ./gradlew bundleRelease --stacktrace --no-daemon
+
+      - name: Verify Android artifacts
+        working-directory: generated/webview-sample
+        run: |
+          test -n "$(find app/build/outputs/apk/debug -name '*.apk' -print -quit)"
+          test -n "$(find app/build/outputs/apk/release -name '*.apk' -print -quit)"
+          test -n "$(find app/build/outputs/bundle/release -name '*.aab' -print -quit)"
 
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
         with:
           name: webview-generator-android-builds
+          if-no-files-found: error
           path: |
             generated/webview-sample/app/build/outputs/apk/debug/*.apk
             generated/webview-sample/app/build/outputs/apk/release/*.apk
