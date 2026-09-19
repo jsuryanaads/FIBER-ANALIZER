@@ -76,4 +76,3 @@ export function coreTrace(db,startId,targetId){
  }
  return{found:false,path:[],steps:[],corePath:[]};
 }
-\n
