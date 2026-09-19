@@ -69,6 +69,7 @@ async function initAuth(){
   try{await loadProfile()}catch(err){showAuth("Koneksi autentikasi gagal: "+err.message);return false}
   if(!currentProfile){$("authScreen").style.display="grid";showAuth();return false}
   await loadOrganizationState();
+  await loadOperationalData();
   $("authScreen").style.display="none";
   $("userName").textContent=currentProfile.name||currentUser.email;
   $("userRole").textContent=currentProfile.role;
@@ -198,7 +199,7 @@ function save(){
   const orgKey=currentProfile?"fiber-analyzer-org-"+currentProfile.organization_id:KEY;
   localStorage.setItem(orgKey,JSON.stringify(db));
   clearTimeout(syncTimer);
-  syncTimer=setTimeout(()=>syncNetworkState().catch(err=>console.error("Supabase sync failed:",err)),150);
+  syncTimer=setTimeout(()=>Promise.all([syncNetworkState(),syncOperationalData()]).catch(err=>console.error("Supabase sync failed:",err)),150);
 }
 async function loadOrganizationState(){
   const orgKey="fiber-analyzer-org-"+currentProfile.organization_id;
@@ -259,6 +260,28 @@ function renderTopologyMap(){
   const nodes=assets.map(a=>{const p=pos.get(a.id),c=color[a.type]||"#8aa5b8";return'<g><rect x="'+(p.x-48)+'" y="'+(p.y-27)+'" width="96" height="54" rx="9" fill="#0d3450" stroke="'+c+'" stroke-width="2"/><text x="'+p.x+'" y="'+(p.y-4)+'" fill="#e7f0f8" text-anchor="middle" font-size="11" font-weight="700">'+esc(typeLabel(a.type))+'</text><text x="'+p.x+'" y="'+(p.y+13)+'" fill="#a8bfd0" text-anchor="middle" font-size="9">'+esc(a.code)+'</text></g>'}).join("");
   const legend='<g transform="translate(14 350)"><rect width="250" height="45" rx="7" fill="#071321" fill-opacity=".94" stroke="#345269"/><text x="10" y="16" fill="#e7f0f8" font-size="10" font-weight="700">Topology Aktif</text><text x="10" y="32" fill="#9db3c5" font-size="9">'+(db.cables||[]).length+' kabel · '+(db.links||[]).length+' service link · '+assets.length+' node</text></g>';
   el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet">'+lines+nodes+legend+'</svg>';
+}
+async function loadOperationalData(){
+  if(!currentProfile)return;
+  const org=currentProfile.organization_id;
+  const [{data:incidents},{data:workOrders}]=await Promise.all([
+    supabase.from("incidents").select("*").eq("organization_id",org).order("created_at",{ascending:false}),
+    supabase.from("work_orders").select("*").eq("organization_id",org).order("created_at",{ascending:false})
+  ]);
+  db.incidents=incidents||[];db.workOrders=workOrders||[];
+}
+async function syncOperationalData(){
+  if(!currentProfile||!roleCan("incident.write"))return;
+  const org=currentProfile.organization_id;
+  const sync=async(table,key,rows)=>{
+    const data=(rows||[]).map(x=>({...x,organization_id:org}));
+    const {data:existing,error:e}=await supabase.from(table).select("id").eq("organization_id",org);
+    if(e)throw e;
+    const wanted=new Set(data.map(x=>x.id));const stale=(existing||[]).map(x=>x.id).filter(id=>!wanted.has(id));
+    if(stale.length){const {error}=await supabase.from(table).delete().in("id",stale);if(error)throw error}
+    if(data.length){const {error}=await supabase.from(table).upsert(data,{onConflict:"id"});if(error)throw error}
+  };
+  await sync("incidents","id",db.incidents);await sync("work_orders","id",db.workOrders);
 }
 function renderCondition(){
   const cores=db.cores||[],total=cores.length,counts={IN_USE:0,AVAILABLE:0,RESERVED:0,DAMAGED:0};
