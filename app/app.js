@@ -41,50 +41,8 @@ coreConnections:[
 {id:"cc-6",nodeId:"odc-odp-1",inputCableId:"cab-jb2-odcodp",inputCoreId:"core-5",outputCableId:"cab-odcodp-jb2",outputCoreId:"core-7",connectionType:"SPLICE",status:"ACTIVE"},
 {id:"cc-7",nodeId:"odc-1",inputCableId:"cab-jb3-odc",inputCoreId:"core-6",outputCableId:"cab-odc-odp",outputCoreId:"core-8",connectionType:"SPLICE",status:"ACTIVE"}
 ]};
-import {shortestTrace,coreTrace,validateGraph} from "./graph-engine.js";
-const KEY="fiber-analyzer-flex-v3";
-const topology=["OLT_PON","OTB","JB","ODC_ODP","ODC","ODP","CUSTOMER"];
-const seed={assets:[
-{id:"olt-1",type:"OLT",code:"OLT-01",name:"OLT Utama",status:"ACTIVE"},
-{id:"pon-1",type:"PON",code:"PON-01",name:"PON Port 01",status:"ACTIVE"},
-{id:"otb-2",type:"OTB",code:"OTB-02",name:"Optical Termination Box 02",status:"ACTIVE"},
-{id:"obt-2",type:"OBT",code:"OBT-02",name:"Optical Branch Terminal 02",status:"ACTIVE"},
-{id:"jb-1",type:"JB",code:"JB-01",name:"Joint Box 01",status:"ACTIVE"},
-{id:"jb-2",type:"JB",code:"JB-02",name:"Joint Box 02",status:"ACTIVE"},
-{id:"jb-3",type:"JB",code:"JB-03",name:"Joint Box 03",status:"ACTIVE"},
-{id:"odc-1",type:"ODC",code:"ODC-01",name:"ODC Utama",status:"ACTIVE"},
-{id:"odp-1",type:"ODP",code:"ODP-01",name:"ODP 01",status:"ACTIVE"},
-{id:"c-1",type:"CUSTOMER",code:"CUST-001",name:"Pelanggan Demo",status:"ACTIVE"}],
-links:[{id:"svc-1",from:"odp-1",to:"c-1",kind:"SERVICE"}],
-logicalLinks:[{id:"logical-olt-pon",from:"olt-1",to:"pon-1",kind:"PON"}],
-splices:[],
-cables:[
-{id:"cab-pon-otb",code:"KBL-PON01-OTB02-24C",fiber_count:24,length_m:900,from:"pon-1",to:"otb-2",status:"ACTIVE"},
-{id:"cab-otb-obt",code:"KBL-OTB02-OBT02-24C",fiber_count:24,length_m:120,from:"otb-2",to:"obt-2",status:"ACTIVE"},
-{id:"cab-obt-jb1",code:"KBL-OBT02-JB01-24C",fiber_count:24,length_m:500,from:"obt-2",to:"jb-1",status:"ACTIVE"},
-{id:"cab-jb1-jb2",code:"KBL-JB01-JB02-24C",fiber_count:24,length_m:600,from:"jb-1",to:"jb-2",status:"ACTIVE"},
-{id:"cab-jb1-jb3",code:"KBL-JB01-JB03-12C",fiber_count:12,length_m:450,from:"jb-1",to:"jb-3",status:"ACTIVE"},
-{id:"cab-jb2-odc",code:"KBL-JB02-ODC01-48C",fiber_count:48,length_m:700,from:"jb-2",to:"odc-1",status:"ACTIVE"},
-{id:"cab-odc-odp",code:"KBL-ODC01-ODP01-12C",fiber_count:12,length_m:300,from:"odc-1",to:"odp-1",status:"ACTIVE"}],
-cores:[
-{id:"core-pon-otb-1",cable_id:"cab-pon-otb",core_number:1,status:"IN_USE"},
-{id:"core-otb-obt-1",cable_id:"cab-otb-obt",core_number:1,status:"IN_USE"},
-{id:"core-obt-jb1-1",cable_id:"cab-obt-jb1",core_number:1,status:"IN_USE"},
-{id:"core-obt-jb1-2",cable_id:"cab-obt-jb1",core_number:2,status:"IN_USE"},
-{id:"core-jb1-jb2-1",cable_id:"cab-jb1-jb2",core_number:1,status:"IN_USE"},
-{id:"core-jb1-jb3-2",cable_id:"cab-jb1-jb3",core_number:2,status:"IN_USE"},
-{id:"core-jb2-odc-3",cable_id:"cab-jb2-odc",core_number:3,status:"IN_USE"},
-{id:"core-odc-odp-2",cable_id:"cab-odc-odp",core_number:2,status:"IN_USE"}],
-coreConnections:[
-{id:"cc-pon-otb",nodeId:"otb-2",inputCableId:"cab-pon-otb",inputCoreId:"core-pon-otb-1",outputCableId:"cab-otb-obt",outputCoreId:"core-otb-obt-1",connectionType:"SPLICE",status:"ACTIVE"},
-{id:"cc-otb-obt",nodeId:"obt-2",inputCableId:"cab-otb-obt",inputCoreId:"core-otb-obt-1",outputCableId:"cab-obt-jb1",outputCoreId:"core-obt-jb1-1",connectionType:"SPLICE",status:"ACTIVE"},
-{id:"cc-jb1-jb2",nodeId:"jb-1",inputCableId:"cab-obt-jb1",inputCoreId:"core-obt-jb1-1",outputCableId:"cab-jb1-jb2",outputCoreId:"core-jb1-jb2-1",connectionType:"SPLICE",status:"ACTIVE"},
-{id:"cc-jb1-jb3",nodeId:"jb-1",inputCableId:"cab-obt-jb1",inputCoreId:"core-obt-jb1-2",outputCableId:"cab-jb1-jb3",outputCoreId:"core-jb1-jb3-2",connectionType:"SPLICE",status:"ACTIVE"},
-{id:"cc-jb2-odc",nodeId:"jb-2",inputCableId:"cab-jb1-jb2",inputCoreId:"core-jb1-jb2-1",outputCableId:"cab-jb2-odc",outputCoreId:"core-jb2-odc-3",connectionType:"SPLICE",status:"ACTIVE"},
-{id:"cc-odc-odp",nodeId:"odc-1",inputCableId:"cab-jb2-odc",inputCoreId:"core-jb2-odc-3",outputCableId:"cab-odc-odp",outputCoreId:"core-odc-odp-2",connectionType:"SPLICE",status:"ACTIVE"}
-]};
 let db=JSON.parse(localStorage.getItem(KEY)||"null")||structuredClone(seed);
-db.assets=db.assets||[];db.links=db.links||[];db.cables=db.cables||[];db.cores=db.cores||[];db.coreConnections=db.coreConnections||[];
+db.assets=db.assets||[];db.links=db.links||[];db.cables=db.cables||[];db.cores=db.cores||[];db.coreConnections=db.coreConnections||[];db.splitters=db.splitters||[];
 function normalizeDb(){
   const existing=new Map(db.cores.map(c=>[(c.cable_id||"")+":"+c.core_number,c]));
   for(const cable of db.cables){
@@ -94,7 +52,7 @@ function normalizeDb(){
       if(!existing.has(key))db.cores.push({id:crypto.randomUUID(),cable_id:cable.id,core_number:n,status:"AVAILABLE"});
     }
   }
-  const cableIds=new Set(db.cables.map(c=>c.id));
+  db.splitters=(db.splitters||[]).filter(s=>db.assets.some(a=>a.id===s.nodeId)&&["ODC_ODP","ODC","ODP"].includes(db.assets.find(a=>a.id===s.nodeId)?.type)&&["1:2","1:4","1:8","1:16","1:32","1:64"].includes(s.ratio));\n  db.splitters.forEach(s=>{if(db.assets.find(a=>a.id===s.nodeId)?.type==="ODP")s.ratio="1:8"});\n  const cableIds=new Set(db.cables.map(c=>c.id));
   const coreIds=new Set(db.cores.map(c=>c.id));
   db.coreConnections=db.coreConnections.filter(x=>cableIds.has(x.inputCableId)&&cableIds.has(x.outputCableId)&&coreIds.has(x.inputCoreId)&&coreIds.has(x.outputCoreId)&&db.assets.some(a=>a.id===x.nodeId));
 }
@@ -102,7 +60,7 @@ normalizeDb();
 const $=id=>document.getElementById(id), save=()=>localStorage.setItem(KEY,JSON.stringify(db));
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 function options(list,value,empty="— Tidak ada —"){return '<option value="">'+empty+'</option>'+list.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===value?"selected":"")+'>'+esc(x.code||x.name||x.id)+'</option>').join("")}
-function render(){renderStats();renderTopologyMap();renderCondition();renderAssets();renderCustomers();renderCores();renderCables();renderConnections()}
+function render(){renderStats();renderTopologyMap();renderCondition();renderAssets();renderCustomers();renderCores();renderCables();renderConnections();renderSplitters()}
 function nodeOptions(value=""){return '<option value="">— Pilih node —</option>'+db.assets.map(a=>'<option value="'+esc(a.id)+'" '+(a.id===value?"selected":"")+'>'+esc(a.code)+' — '+esc(a.name)+'</option>').join("")}
 function openCable(c){c=c||{};$("cableId").value=c.id||"";$("cableCode").value=c.code||"";$("cableFrom").innerHTML=nodeOptions(c.from);$("cableTo").innerHTML=nodeOptions(c.to);$("cableFiberCount").value=c.fiber_count||12;$("cableLength").value=c.length_m||0;$("cableStatus").value=c.status||"ACTIVE";$("cableDialog").showModal()}
 function cablesAtNode(nodeId){return (db.cables||[]).filter(c=>c.from===nodeId||c.to===nodeId)}
@@ -173,3 +131,48 @@ $("addConnection").onclick=()=>openConnection();
 $("cableList").onclick=e=>{const edit=e.target.dataset.cableEdit,del=e.target.dataset.cableDel;if(edit)openCable(db.cables.find(c=>c.id===edit));if(del&&confirm("Hapus kabel dan seluruh core kabel ini?")){db.cables=db.cables.filter(c=>c.id!==del);db.cores=db.cores.filter(c=>c.cable_id!==del);db.coreConnections=(db.coreConnections||[]).filter(x=>x.inputCableId!==del&&x.outputCableId!==del);save();render()}};
 $("resetDemo").onclick=()=>{if(confirm("Reset seluruh data demo di browser?")){db=structuredClone(seed);save();render()}};
 render();
+function splitterLoss(ratio){const n=Number(String(ratio).split(":")[1])||1;return 10*Math.log10(n)}
+function splitterAllowed(type){return type==="ODC_ODP"||type==="ODC"||type==="ODP"}
+function renderSplitters(){
+  const byId=Object.fromEntries(db.assets.map(a=>[a.id,a]));
+  const groups=new Map();
+  (db.splitters||[]).forEach(s=>{if(!groups.has(s.nodeId))groups.set(s.nodeId,[]);groups.get(s.nodeId).push(s)});
+  $("splitterList").innerHTML=[...groups.entries()].map(([nodeId,list])=>{
+    const a=byId[nodeId]; const total=list.reduce((n,s)=>n+splitterLoss(s.ratio),0);
+    return '<div class="splitter-card"><div><b>'+esc(a?.code||nodeId)+'</b><span class="badge">'+esc(a?.type||"")+'</span></div>'+
+      '<div class="splitter-chain">'+list.sort((x,y)=>(x.stage||0)-(y.stage||0)).map(s=>'<span>'+esc(s.ratio)+' <small>Stage '+esc(s.stage||1)+'</small> <em>'+splitterLoss(s.ratio).toFixed(2)+' dB</em></span>').join('<b>→</b>')+
+      '</div><div class="muted">Total theoretical splitter loss: '+total.toFixed(2)+' dB · '+list.length+' splitter</div>'+
+      '<div class="cable-actions">'+list.map(s=>'<button class="danger" data-splitter-del="'+esc(s.id)+'">Hapus</button>').join('')+'</div></div>'
+  }).join('')||'<p class="muted">Belum ada konfigurasi splitter.</p>';
+}
+function fillSplitterNodes(value=""){
+  $("splitterNode").innerHTML='<option value="">— Pilih ODC-ODP / ODC / ODP —</option>'+
+    db.assets.filter(a=>splitterAllowed(a.type)).map(a=>'<option value="'+esc(a.id)+'" '+(a.id===value?"selected":"")+'>'+esc(a.code)+' — '+esc(a.type)+'</option>').join('');
+}
+function openSplitter(s={}){
+  $("splitterId").value=s.id||"";
+  fillSplitterNodes(s.nodeId||"");
+  $("splitterRatio").value=s.ratio||"1:4";
+  $("splitterStage").value=s.stage||1;
+  $("splitterHint").textContent=s.nodeId&&db.assets.find(a=>a.id===s.nodeId)?.type==="ODP"?"ODP hanya menggunakan 1:8.":"ODC-ODP dan ODC dapat memiliki beberapa splitter dan beberapa stage.";
+  $("splitterDialog").showModal();
+}
+$("addSplitter").onclick=()=>openSplitter();
+$("splitterNode").onchange=()=>{
+  const type=db.assets.find(a=>a.id===$("splitterNode").value)?.type;
+  if(type==="ODP"){$("splitterRatio").value="1:8";$("splitterRatio").disabled=true}else $("splitterRatio").disabled=false;
+  $("splitterHint").textContent=type==="ODP"?"ODP hanya menggunakan splitter 1:8.":"ODC-ODP dan ODC dapat memakai beberapa splitter.";
+};
+$("splitterForm").onsubmit=e=>{
+  e.preventDefault();
+  const id=$("splitterId").value||crypto.randomUUID(),nodeId=$("splitterNode").value,ratio=$("splitterRatio").value,stage=Math.max(1,Number($("splitterStage").value)||1),node=db.assets.find(a=>a.id===nodeId);
+  if(!node||!splitterAllowed(node.type)){alert("Splitter hanya dapat dipasang pada ODC-ODP, ODC, atau ODP.");return}
+  if(node.type==="ODP"&&ratio!=="1:8"){alert("ODP wajib menggunakan splitter 1:8.");return}
+  const item={id,nodeId,ratio,stage};
+  const i=db.splitters.findIndex(x=>x.id===id);if(i>=0)db.splitters[i]=item;else db.splitters.push(item);
+  save();$("splitterDialog").close();render();
+};
+$("splitterList").onclick=e=>{
+  const id=e.target.dataset.splitterDel;
+  if(id&&confirm("Hapus splitter ini?")){db.splitters=db.splitters.filter(s=>s.id!==id);save();render()}
+};
