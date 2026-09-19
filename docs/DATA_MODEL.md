@@ -2,7 +2,20 @@
 
 ## Design principle
 
-Separate **network assets**, **physical connectivity**, **logical service connectivity**, and **measurements**. A cable is not a node; it is a physical segment connecting two network locations.
+The topology is a **flexible graph**, not a fixed OLT → JB → ODC → ODP chain. Every supported network node may connect to any other supported node when that physical route exists.
+
+Canonical UI node types:
+- OLT
+- OTB
+- JB
+- ODC_ODP (ditampilkan sebagai BOX ODC-ODP)
+- ODC (ditampilkan sebagai BOX ODC)
+- ODP (ditampilkan sebagai BOX ODP)
+- CUSTOMER
+
+Examples of valid physical relationships include JB → JB, JB → ODC_ODP, JB → ODC, JB → ODP, ODC_ODP → JB, ODC → JB, ODP → JB, and other combinations. The database must not reject a connection solely because of node type ordering.
+
+A cable is a physical segment connecting two nodes. Each cable has its own fiber capacity (for example 12C, 24C, 48C) and individual cores. At any node, a core continuity mapping may connect an input cable/core to a different output cable/core. Core numbers therefore may change between cable segments, and multiple mappings at the same node provide branching.
 
 ## Primary entities
 
@@ -20,20 +33,20 @@ Separate **network assets**, **physical connectivity**, **logical service connec
 - created_at
 - updated_at
 
-### pon
+### olt port details
 - id
 - olt_id
-- slot
-- port
+- port_number
 - code
-- technology
 - capacity
 - status
 - notes
 
-Unique logical identity should normally be: olt_id + slot + port.
+Unique logical identity: olt_id + port_number.
 
-### jb
+An OLT can have many ports. A cable endpoint may bind to a specific OLT port, e.g. OLT Port 1 → OTB-01 Port 1 or OLT Port 2 → OTB-03 Port 1.
+
+### otb / jb / odc_odp / odc / odp / customer nodes
 - id
 - code
 - name
@@ -96,8 +109,31 @@ Core status:
 - DAMAGED
 - RETIRED
 
+### splitter
+- id
+- node_id
+- ratio (1:2, 1:4, 1:8, 1:16, 1:32, 1:64)
+- stage
+- input_type (`CORE` or `SPLITTER`)
+- input_cable_id
+- input_core_id
+- input_splitter_id
+- input_port
+
+A splitter belongs to a BOX ODC-ODP, BOX ODC, or BOX ODP. Multiple splitters may exist in one box. A splitter output port may be internally patched to the input of another splitter in the same box.
+
+### splitter_connection
+- id
+- node_id
+- from_splitter_id
+- from_port
+- to_splitter_id
+- to_port
+
+This explicitly models internal box patching such as SPL-A Port 1 → SPL-B INPUT and SPL-B Port 4 → SPL-C INPUT.
+
 ### port
-A normalized port entity should represent OLT/PON, JB, ODC and ODP termination points where needed.
+A normalized port entity should represent OLT ports, JB, ODC and ODP termination points where needed.
 
 Fields:
 - id
@@ -137,8 +173,7 @@ A splice maps one core to another core. It must not be represented only as a tex
 ### service_path
 Represents the logical route used by a customer/service. It should be derivable from the topology but may be materialized for fast reads.
 
-Recommended path:
-PON → JB → ODC → ODP → Customer
+No fixed path is required. A service path is derived from the actual graph and core continuity mappings.
 
 ### test_record
 - id
@@ -210,9 +245,7 @@ Supported test types:
 
 ## Relationship summary
 
-OLT 1—N PON
-
-PON → JB → ODC → ODP → Customer is the canonical logical service topology.
+All supported node types participate in a many-to-many physical topology through cables. OLT ports are the source endpoints of a service, but intermediate node ordering is not constrained.
 
 Cable N—1 origin node and N—1 destination node.
 
