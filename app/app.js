@@ -22,7 +22,22 @@ cores:[
 {id:"core-3",cable_id:"cab-jb1-jb3",core_number:1,status:"IN_USE"},
 {id:"core-4",cable_id:"cab-jb2-odc",core_number:1,status:"IN_USE"},
 {id:"core-5",cable_id:"cab-odc-odp",core_number:1,status:"IN_USE"}],coreConnections:[{id:"cc-1",nodeId:"jb-1",inputCableId:"cab-olt-jb1",inputCoreId:"core-1",outputCableId:"cab-jb1-jb2",outputCoreId:"core-2",connectionType:"SPLICE",status:"ACTIVE"},{id:"cc-2",nodeId:"jb-2",inputCableId:"cab-jb1-jb2",inputCoreId:"core-2",outputCableId:"cab-jb2-odc",outputCoreId:"core-4",connectionType:"SPLICE",status:"ACTIVE"},{id:"cc-3",nodeId:"odc-1",inputCableId:"cab-jb2-odc",inputCoreId:"core-4",outputCableId:"cab-odc-odp",outputCoreId:"core-5",connectionType:"SPLICE",status:"ACTIVE"}]};
-let db=JSON.parse(localStorage.getItem(KEY)||"null")||seed;db.coreConnections=db.coreConnections||[];
+let db=JSON.parse(localStorage.getItem(KEY)||"null")||structuredClone(seed);
+db.assets=db.assets||[];db.links=db.links||[];db.cables=db.cables||[];db.cores=db.cores||[];db.coreConnections=db.coreConnections||[];
+function normalizeDb(){
+  const existing=new Map(db.cores.map(c=>[(c.cable_id||"")+":"+c.core_number,c]));
+  for(const cable of db.cables){
+    const count=Math.max(1,Number(cable.fiber_count)||1);
+    for(let n=1;n<=count;n++){
+      const key=cable.id+":"+n;
+      if(!existing.has(key))db.cores.push({id:crypto.randomUUID(),cable_id:cable.id,core_number:n,status:"AVAILABLE"});
+    }
+  }
+  const cableIds=new Set(db.cables.map(c=>c.id));
+  const coreIds=new Set(db.cores.map(c=>c.id));
+  db.coreConnections=db.coreConnections.filter(x=>cableIds.has(x.inputCableId)&&cableIds.has(x.outputCableId)&&coreIds.has(x.inputCoreId)&&coreIds.has(x.outputCoreId)&&db.assets.some(a=>a.id===x.nodeId));
+}
+normalizeDb();
 const $=id=>document.getElementById(id), save=()=>localStorage.setItem(KEY,JSON.stringify(db));
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 function options(list,value,empty="— Tidak ada —"){return '<option value="">'+empty+'</option>'+list.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===value?"selected":"")+'>'+esc(x.code||x.name||x.id)+'</option>').join("")}
@@ -37,7 +52,7 @@ function openConnection(x){x=x||{};$("connectionId").value=x.id||"";fillConnecti
 function renderCables(){const byId=Object.fromEntries(db.assets.map(a=>[a.id,a]));$("cableList").innerHTML='<div class="cable-grid">'+(db.cables||[]).map(c=>'<div class="cable-card"><div><b>'+esc(c.code)+'</b><span class="badge">'+esc(c.fiber_count)+' CORE</span></div><div class="route"><strong>'+esc(byId[c.from]?.code||"?")+'</strong><span>→</span><strong>'+esc(byId[c.to]?.code||"?")+'</strong></div><div class="muted">'+esc(c.length_m)+' m · '+esc(c.status)+'</div><div class="cable-actions"><button data-cable-edit="'+esc(c.id)+'">Edit</button><button class="danger" data-cable-del="'+esc(c.id)+'">Hapus</button></div></div>').join("")+'</div>'}
 
 function renderStats(){const counts=Object.fromEntries(topology.map(t=>[t,db.assets.filter(a=>a.type===t).length]));$("stats").innerHTML=topology.map(t=>'<div class="stat"><b>'+counts[t]+'</b><span>'+t+'</span></div>').join("")+'<div class="stat"><b>'+db.cores.length+'</b><span>CORES</span></div>'}
-function renderTopology(){$("topology").innerHTML=topology.map((t,i)=>'<div class="node"><b>'+t+'</b><small>'+db.assets.filter(a=>a.type===t).length+' asset</small></div>'+(i<topology.length-1?'<span class="arrow">→</span>':"")).join("")}
+function renderTopology(){const el=$("topology");if(!el)return;el.innerHTML=topology.map((t,i)=>'<div class="node"><b>'+t+'</b><small>'+db.assets.filter(a=>a.type===t).length+' asset</small></div>'+(i<topology.length-1?'<span class="arrow">→</span>':"")).join("")}
 function renderAssets(){const q=$("search").value.toLowerCase();const a=db.assets.filter(x=>(x.code+" "+x.name+" "+x.type).toLowerCase().includes(q));$("assets").innerHTML=a.map(x=>'<div class="row"><div><b>'+esc(x.code)+'</b><div class="muted">'+esc(x.type)+' · '+esc(x.name)+'</div><div class="muted">IN: '+esc((db.cables.find(c=>c.id===x.incomingCableId)||{}).code||"—")+' · OUT: '+esc((db.cables.find(c=>c.id===x.outgoingCableId)||{}).code||"—")+'</div></div><span class="badge">'+esc(x.status)+'</span><div><button data-edit="'+esc(x.id)+'">Edit</button> <button class="danger" data-del="'+esc(x.id)+'">Hapus</button></div></div>').join("")||'<p class="muted">Tidak ada asset.</p>'}
 function renderCustomers(){$("customerSelect").innerHTML=db.assets.filter(x=>x.type==="CUSTOMER").map(x=>'<option value="'+esc(x.id)+'">'+esc(x.code)+' — '+esc(x.name)+'</option>').join("")}
 function renderCores(){const cables=Object.fromEntries(db.cables.map(c=>[c.id,c]));$("cores").innerHTML='<table class="table"><thead><tr><th>Cable</th><th>Core</th><th>Status</th><th>Length</th></tr></thead><tbody>'+db.cores.map(c=>'<tr><td>'+esc(cables[c.cable_id]?.code||"-")+'</td><td>'+c.core_number+'</td><td><span class="badge">'+esc(c.status)+'</span></td><td>'+esc(cables[c.cable_id]?.length_m||"-")+' m</td></tr>').join("")+'</tbody></table>'}
