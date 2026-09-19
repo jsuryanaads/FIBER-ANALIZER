@@ -2,7 +2,7 @@ import {shortestTrace,coreTrace,validateGraph} from "../app/graph-engine.js";
 
 const db={
  assets:[
-  {id:"src",type:"OLT_PON"},{id:"otb",type:"OTB"},{id:"jb1",type:"JB"},{id:"jb2",type:"JB"},
+  {id:"src",type:"OLT",port_count:16},{id:"otb",type:"OTB"},{id:"jb1",type:"JB"},{id:"jb2",type:"JB"},
   {id:"dist",type:"ODC_ODP"},{id:"odc",type:"ODC"},{id:"odp",type:"ODP"},{id:"cust",type:"CUSTOMER"}
  ],
  logicalLinks:[],
