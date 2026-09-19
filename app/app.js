@@ -3,33 +3,105 @@ import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from "./supabase-config.js";
 const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 import {shortestTrace,coreTrace,validateGraph} from "./graph-engine.js";
 const KEY="fiber-analyzer-flex-v3";
-// Authentication & RBAC foundation
-const AUTH_KEY="fiber-analyzer-auth-v1";
+const $=id=>document.getElementById(id);
 const ROLE_PERMISSIONS={
-  ADMINISTRATOR:["*"],
-  PENGELOLA:["dashboard.read","network.write","customer.write","analysis.use","incident.write","report.read"],
-  TEKNISI:["dashboard.read","network.read","customer.read","analysis.use","incident.write","workorder.write"]
+  ADMINISTRATOR:["*","user.manage","system.reset","settings.manage"],
+  PENGELOLA:["dashboard.read","network.read","network.write","customer.read","customer.write","analysis.use","incident.read","incident.write","workorder.read","workorder.write","report.read"],
+  TEKNISI:["dashboard.read","network.read","customer.read","analysis.use","incident.read","incident.write","workorder.read","workorder.write"]
 };
-let authState=JSON.parse(localStorage.getItem(AUTH_KEY)||"null")||{users:[],session:null};
 let currentUser=null;
-async function hashPassword(password){const data=new TextEncoder().encode(password);const digest=await crypto.subtle.digest("SHA-256",data);return [...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,"0")).join("")}
-function roleCan(permission){return !!currentUser&&(ROLE_PERMISSIONS[currentUser.role]||[]).includes("*")||(ROLE_PERMISSIONS[currentUser?.role]||[]).includes(permission)}
-function saveAuth(){localStorage.setItem(AUTH_KEY,JSON.stringify(authState))}
-function renderAuth(mode="login",error=""){const body=$("authBody");if(!body)return;const setup=!authState.users.length;body.innerHTML=setup?'<h2>Setup Administrator</h2><p>Buat akun Administrator pertama untuk mengamankan aplikasi.</p><form id="setupForm"><label>Username<input id="setupUser" required autocomplete="username"></label><label>Nama<input id="setupName" required></label><label>Password<input id="setupPass" type="password" minlength="8" required autocomplete="new-password"></label><label>Konfirmasi Password<input id="setupPass2" type="password" minlength="8" required autocomplete="new-password"></label><button>Buat Administrator</button></form><div id="authError">'+esc(error)+'</div><div class="auth-note">Password disimpan sebagai SHA-256 hash di browser. Untuk produksi multi-user, gunakan backend authentication.</div>': '<h2>Login</h2><p>Masuk ke FIBER-ANALYZER.</p><form id="loginForm"><label>Username<input id="loginUser" required autocomplete="username"></label><label>Password<input id="loginPass" type="password" required autocomplete="current-password"></label><button>Masuk</button></form><div id="authError">'+esc(error)+'</div>';
-  if(setup){$("setupForm").onsubmit=async e=>{e.preventDefault();const username=$("setupUser").value.trim();const name=$("setupName").value.trim();const pass=$("setupPass").value;if(pass!==$("setupPass2").value)return renderAuth("setup","Konfirmasi password tidak sama.");if(pass.length<8)return renderAuth("setup","Password minimal 8 karakter.");authState.users=[{id:crypto.randomUUID(),username,name,role:"ADMINISTRATOR",passwordHash:await hashPassword(pass),active:true,createdAt:new Date().toISOString()}];authState.session=authState.users[0].id;saveAuth();location.reload()}}else{$("loginForm").onsubmit=async e=>{e.preventDefault();const username=$("loginUser").value.trim();const hash=await hashPassword($("loginPass").value);const user=authState.users.find(u=>u.username===username&&u.active&&u.passwordHash===hash);if(!user)return renderAuth("login","Username atau password salah.");authState.session=user.id;saveAuth();location.reload()}}}
-function initAuth(){currentUser=authState.users.find(u=>u.id===authState.session&&u.active)||null;if(!currentUser){$("authScreen").style.display="grid";renderAuth();return false}$("authScreen").style.display="none";$("userName").textContent=currentUser.name||currentUser.username;$("userRole").textContent=currentUser.role;$("userAvatar").textContent=(currentUser.name||currentUser.username).slice(0,2).toUpperCase();$("logoutBtn").onclick=()=>{authState.session=null;saveAuth();location.reload()};document.querySelectorAll(".admin-only,.admin-nav").forEach(el=>el.style.display=currentUser.role==="ADMINISTRATOR"?"":"none");return true}
-function requirePermission(permission){if(roleCan(permission))return true;alert("Akses ditolak. Role "+(currentUser?.role||"UNKNOWN")+" tidak memiliki izin ini.");return false}
-function canManageUsers(){return currentUser?.role==="ADMINISTRATOR"}
-function renderUsers(){const el=$("userList");if(!el)return;if(!canManageUsers()){el.innerHTML='<p class="muted">Akses Administrator diperlukan.</p>';return}el.innerHTML=authState.users.map(u=>'<div class="cable-card"><div><b>'+esc(u.name||u.username)+'</b><span class="badge">'+esc(u.role)+'</span></div><div class="muted">@'+esc(u.username)+' · '+(u.active?"ACTIVE":"INACTIVE")+(u.id===currentUser?.id?" · Sesi aktif":"")+'</div><div class="cable-actions">'+(u.id===currentUser?.id?'<button data-user-edit="'+esc(u.id)+'">Edit</button>':'<button data-user-edit="'+esc(u.id)+'">Edit</button><button class="danger" data-user-del="'+esc(u.id)+'">Hapus</button>')+'</div></div>').join("")||'<p class="muted">Belum ada user.</p>'}
-function openUser(u={}){$("userId").value=u.id||"";$("userUsername").value=u.username||"";$("userUsername").disabled=!!u.id;$("userNameInput").value=u.name||"";$("userRoleInput").value=u.role||"TEKNISI";$("userActive").value=String(u.active!==false);$("userPassword").value="";$("userDialogTitle").textContent=u.id?"Edit User":"Tambah User";$("userDialog").showModal()}
-$("addUser").onclick=()=>{if(requirePermission("user.manage"))openUser()};
-$("userForm").onsubmit=async e=>{e.preventDefault();if(!requirePermission("user.manage"))return;const id=$("userId").value||crypto.randomUUID(),username=$("userUsername").value.trim(),name=$("userNameInput").value.trim(),role=$("userRoleInput").value,active=$("userActive").value==="true",pass=$("userPassword").value;const existing=authState.users.find(u=>u.id===id);if(!username||!name){alert("Username dan nama wajib diisi.");return}if(!existing&&pass.length<8){alert("Password minimal 8 karakter.");return}if(existing?.id===currentUser.id&&!active){alert("Administrator yang sedang login tidak dapat dinonaktifkan.");return}if(existing?.role==="ADMINISTRATOR"&&existing.id===currentUser.id&&role!=="ADMINISTRATOR"){alert("Administrator yang sedang login tidak dapat menurunkan role sendiri.");return}if(authState.users.some(u=>u.username===username&&u.id!==id)){alert("Username sudah digunakan.");return}const item={id,username,name,role,active,passwordHash:existing?.passwordHash||"",createdAt:existing?.createdAt||new Date().toISOString()};if(pass)item.passwordHash=await hashPassword(pass);const i=authState.users.findIndex(u=>u.id===id);if(i>=0)authState.users[i]=item;else authState.users.push(item);if(existing?.id===currentUser.id)authState.session=id;saveAuth();$("userDialog").close();currentUser=authState.users.find(u=>u.id===authState.session)||currentUser;renderUsers();$("userName").textContent=currentUser.name||currentUser.username;$("userRole").textContent=currentUser.role};
-$("userList").onclick=e=>{if(!requirePermission("user.manage"))return;const edit=e.target.dataset.userEdit,del=e.target.dataset.userDel;if(edit)openUser(authState.users.find(u=>u.id===edit));if(del){const u=authState.users.find(x=>x.id===del);if(u?.role==="ADMINISTRATOR"&&authState.users.filter(x=>x.role==="ADMINISTRATOR").length<=1){alert("Administrator terakhir tidak dapat dihapus.");return}if(u&&confirm("Hapus user "+u.username+"?")){authState.users=authState.users.filter(x=>x.id!==del);saveAuth();renderUsers()}}};
-ROLE_PERMISSIONS.ADMINISTRATOR.push("user.manage");
+let currentProfile=null;
+const portalRole=()=>({"/admin/login":"ADMINISTRATOR","/pengelola/login":"PENGELOLA","/teknisi/login":"TEKNISI"}[location.pathname]||"");
+const portalLabel=role=>({ADMINISTRATOR:"Administrator",PENGELOLA:"Pengelola",TEKNISI:"Teknisi"}[role]||"Portal");
+const roleCan=permission=>!!currentProfile&&((ROLE_PERMISSIONS[currentProfile.role]||[]).includes("*")||(ROLE_PERMISSIONS[currentProfile.role]||[]).includes(permission));
+const canManageUsers=()=>currentProfile?.role==="ADMINISTRATOR";
 
+async function loadProfile(){
+  const {data:{user}}=await supabase.auth.getUser();
+  currentUser=user||null;
+  if(!user){currentProfile=null;return null}
+  const {data,error}=await supabase.from("profiles").select("id,organization_id,role,name,username,active").eq("id",user.id).maybeSingle();
+  if(error) throw error;
+  if(!data && portalRole()==="ADMINISTRATOR"){
+    const {data:boot,error:bootError}=await supabase.rpc("bootstrap_admin");
+    if(bootError) throw bootError;
+    currentProfile=boot;
+  }else currentProfile=data||null;
+  return currentProfile;
+}
+
+function showAuth(error="",register=false){
+  const body=$("authBody"), pathRole=portalRole();
+  if(!body)return;
+  const role=pathRole||"";
+  const title=role?portalLabel(role)+" Login":"Pilih Portal Login";
+  if(!role){
+    body.innerHTML='<h2>Secure Access</h2><p>Pilih portal sesuai akun Anda.</p><div class="portal-grid"><a class="portal-card" href="/admin/login"><b>Administrator</b><span>Manajemen sistem & user</span></a><a class="portal-card" href="/pengelola/login"><b>Pengelola</b><span>Operasional jaringan</span></a><a class="portal-card" href="/teknisi/login"><b>Teknisi</b><span>Lapangan & maintenance</span></a></div>';
+    return;
+  }
+  const isAdmin=role==="ADMINISTRATOR";
+  body.innerHTML=register&&isAdmin
+    ? '<h2>Daftar Administrator</h2><p>Akun Administrator pertama membuat organisasi baru.</p><form id="registerForm"><label>Email<input id="registerEmail" type="email" required autocomplete="email"></label><label>Nama<input id="registerName" required></label><label>Username<input id="registerUsername" required autocomplete="username"></label><label>Organisasi<input id="registerOrg" required></label><label>Password<input id="registerPass" type="password" minlength="8" required autocomplete="new-password"></label><label>Konfirmasi Password<input id="registerPass2" type="password" minlength="8" required autocomplete="new-password"></label><button>Daftar Administrator</button></form><button id="backLogin" class="ghost">Kembali ke Login</button><div id="authError">'+esc(error)+'</div>'
+    : '<h2>'+title+'</h2><p>Login menggunakan email dan password Supabase Auth.</p><form id="loginForm"><label>Email<input id="loginEmail" type="email" required autocomplete="email"></label><label>Password<input id="loginPass" type="password" required autocomplete="current-password"></label><button>Masuk sebagai '+portalLabel(role)+'</button></form>'+(isAdmin?'<button id="registerLink" class="ghost">Daftar Administrator Baru</button>':'')+'<div id="authError">'+esc(error)+'</div>';
+  if($("registerForm"))$("registerForm").onsubmit=async e=>{
+    e.preventDefault();const email=$("registerEmail").value.trim(),name=$("registerName").value.trim(),username=$("registerUsername").value.trim(),org=$("registerOrg").value.trim(),pass=$("registerPass").value;
+    if(pass!==$("registerPass2").value)return showAuth("Konfirmasi password tidak sama.",true);
+    const {data,error}=await supabase.auth.signUp({email,password:pass,options:{data:{name,username,organization_name:org},emailRedirectTo:location.origin+"/admin/login"}});
+    if(error)return showAuth(error.message,true);
+    if(data.session){try{await loadProfile();location.href="/"}catch(err){showAuth(err.message,true)}}else showAuth("Pendaftaran berhasil. Periksa email untuk konfirmasi, lalu login di /admin/login.",false);
+  };
+  if($("backLogin"))$("backLogin").onclick=()=>showAuth("");
+  if($("registerLink"))$("registerLink").onclick=()=>showAuth("",true);
+  if($("loginForm"))$("loginForm").onsubmit=async e=>{
+    e.preventDefault();
+    const {data,error}=await supabase.auth.signInWithPassword({email:$("loginEmail").value.trim(),password:$("loginPass").value});
+    if(error)return showAuth(error.message);
+    try{
+      const profile=await loadProfile();
+      if(!profile||!profile.active)throw new Error("Akun belum diaktifkan atau profil organisasi belum tersedia.");
+      if(profile.role!==role){await supabase.auth.signOut();return showAuth("Akun ini terdaftar sebagai "+portalLabel(profile.role)+". Gunakan portal /"+profile.role.toLowerCase()+"/login.");}
+      location.href="/";
+    }catch(err){await supabase.auth.signOut();showAuth(err.message)}
+  };
+}
+
+async function initAuth(){
+  try{await loadProfile()}catch(err){showAuth("Koneksi autentikasi gagal: "+err.message);return false}
+  if(!currentProfile){$("authScreen").style.display="grid";showAuth();return false}
+  $("authScreen").style.display="none";
+  $("userName").textContent=currentProfile.name||currentUser.email;
+  $("userRole").textContent=currentProfile.role;
+  $("userAvatar").textContent=(currentProfile.name||currentUser.email).slice(0,2).toUpperCase();
+  $("logoutBtn").onclick=async()=>{await supabase.auth.signOut();location.href="/admin/login"};
+  document.querySelectorAll(".admin-only,.admin-nav").forEach(el=>el.style.display=currentProfile.role==="ADMINISTRATOR"?"":"none");
+  return true;
+}
+function requirePermission(permission){if(roleCan(permission))return true;alert("Akses ditolak. Role "+(currentProfile?.role||"UNKNOWN")+" tidak memiliki izin ini.");return false}
+async function renderUsers(){
+  const el=$("userList");if(!el)return;
+  if(!canManageUsers()){el.innerHTML='<p class="muted">Akses Administrator diperlukan.</p>';return}
+  const {data,error}=await supabase.from("profiles").select("id,name,username,role,active,created_at").eq("organization_id",currentProfile.organization_id).order("created_at");
+  if(error){el.innerHTML='<p class="muted">'+esc(error.message)+'</p>';return}
+  el.innerHTML=(data||[]).map(u=>'<div class="cable-card"><div><b>'+esc(u.name||u.username||u.id)+'</b><span class="badge">'+esc(u.role)+'</span></div><div class="muted">'+esc(u.username||"")+' · '+(u.active?"ACTIVE":"INACTIVE")+(u.id===currentUser?.id?" · Sesi aktif":"")+'</div><div class="cable-actions">'+(u.id===currentUser?.id?'':'<button data-user-toggle="'+esc(u.id)+'">'+(u.active?"Nonaktifkan":"Aktifkan")+'</button>')+'</div></div>').join("")||'<p class="muted">Belum ada user.</p>';
+}
+function openUser(u={}){$("userId").value="";$("userUsername").value="";$("userNameInput").value="";$("userRoleInput").value="TEKNISI";$("userActive").value="true";$("userPassword").value="";$("userDialogTitle").textContent="Undang User";$("userDialog").showModal()}
+$("addUser")?.addEventListener("click",()=>{if(requirePermission("user.manage"))openUser()});
+$("userForm")?.addEventListener("submit",async e=>{
+  e.preventDefault();if(!requirePermission("user.manage"))return;
+  const name=$("userNameInput").value.trim(),username=$("userUsername").value.trim(),role=$("userRoleInput").value,email=$("userEmail")?.value.trim()||"";
+  if(!email||!name||!["PENGELOLA","TEKNISI"].includes(role)){alert("Email, nama, dan role Pengelola/Teknisi wajib diisi.");return}
+  const {data,error}=await supabase.functions.invoke("admin-user",{body:{email,name,username,role}});
+  if(error){alert(error.message||"Gagal mengundang user.");return}
+  $("userDialog").close();renderUsers();
+});
+$("userList")?.addEventListener("click",async e=>{
+  const id=e.target.dataset.userToggle;if(!id||!requirePermission("user.manage"))return;
+  const active=e.target.textContent.includes("Nonaktifkan");
+  const {error}=await supabase.from("profiles").update({active:!active,updated_at:new Date().toISOString()}).eq("id",id).eq("organization_id",currentProfile.organization_id);
+  if(error)alert(error.message);else renderUsers();
+});
 document.addEventListener("click",e=>{const t=e.target.closest("button,[data-edit],[data-del],[data-cable-edit],[data-cable-del],[data-conn-edit],[data-conn-del],[data-splitter-del],[data-splitter-conn-del]");if(!t)return;const mutating=t.matches("#addAsset,#addCable,#addConnection,#addSplitter,#addSplitterConnection,#resetDemo,[data-edit],[data-del],[data-cable-edit],[data-cable-del],[data-conn-edit],[data-conn-del],[data-splitter-del],[data-splitter-conn-del]");if(mutating&&!roleCan("network.write")){e.preventDefault();e.stopImmediatePropagation();requirePermission("network.write")}},true);
 document.addEventListener("submit",e=>{if(e.target.matches("#assetForm,#cableForm,#connectionForm,#splitterForm,#splitterConnectionForm")&&!roleCan("network.write")){e.preventDefault();e.stopImmediatePropagation();requirePermission("network.write")}},true);
-
 const topology=["OLT","OTB","JB","ODC_ODP","ODC","ODP","CUSTOMER"];
 const typeLabel=t=>({OLT:"OLT",OTB:"OTB",JB:"JB",ODC_ODP:"BOX ODC-ODP",ODC:"BOX ODC",ODP:"BOX ODP",CUSTOMER:"PELANGGAN"}[t]||t);
 const emptyDb=()=>({assets:[],links:[],logicalLinks:[],splices:[],splitterOutputs:[],splitterConnections:[],cables:[],cores:[],splitters:[],coreConnections:[]});
@@ -77,7 +149,7 @@ function normalizeDb(){
 function normalizeOltPorts(){for(const a of db.assets.filter(x=>x.type==="OLT")){const n=Math.max(1,Number(a.port_count)||16);a.port_count=n;a.olt_ports=Array.from({length:n},(_,i)=>a.olt_ports?.[i]||({port_number:i+1,code:`${a.code}-P${i+1}`,status:"AVAILABLE"}))}}
 normalizeOltPorts();
 normalizeDb();
-const $=id=>document.getElementById(id), save=()=>localStorage.setItem(KEY,JSON.stringify(db));
+const save=()=>localStorage.setItem(KEY,JSON.stringify(db));
 function wireNavigation(){document.querySelectorAll("[data-scroll]").forEach(b=>b.onclick=()=>document.querySelector(b.dataset.scroll)?.scrollIntoView({behavior:"smooth",block:"start"}));document.querySelectorAll(".sidebar nav a[href]").forEach(a=>a.onclick=()=>{document.querySelectorAll(".sidebar nav a").forEach(x=>x.classList.remove("active"));a.classList.add("active")})}
 
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
@@ -284,5 +356,4 @@ function renderOpticalAnalyzer(){
 }
 
 
-if(!initAuth()) throw new Error("AUTH_REQUIRED");
-render();
+(async()=>{if(await initAuth())render()})().catch(err=>{console.error(err);showAuth(err.message||"AUTH_REQUIRED")});
