@@ -1,16 +1,39 @@
 <!doctype html>
 <html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FIBER-ANALIZER | Network Management</title><link rel="stylesheet" href="./styles.css"></head>
+<title>FIBER-ANALYZER — Fiber Network Management</title><link rel="stylesheet" href="./styles.css"></head>
 <body>
-<header><div><span class="eyebrow">FIBER NETWORK MANAGEMENT</span><h1>FIBER-ANALIZER</h1><p>OLT → PON → JB → ODC → ODP → Customer</p></div><button id="resetDemo">Reset Demo</button></header>
+<div class="app-shell">
+<aside class="sidebar">
+  <div class="brand"><div class="brand-mark">⌁</div><div><strong>FIBER-ANALYZER</strong><small>Fiber Network Management</small></div></div>
+  <nav>
+    <a class="active">⌂ <span>Dashboard</span></a><a>⌖ <span>Topology Map</span></a><a>▦ <span>Inventory</span></a><a>⌁ <span>Cable & Core</span></a><a>⇄ <span>Trace & Analysis</span></a><a>◉ <span>Optical Analyzer</span></a><a>⚠ <span>Incident</span></a><a>✓ <span>Work Order</span></a><a>♙ <span>Customer</span></a><a>▤ <span>Reports</span></a><a>⚙ <span>Settings</span></a>
+  </nav>
+  <div class="sidebar-foot"><span class="online-dot"></span> System Online <small>v1.0.0</small></div>
+</aside>
+<div class="workspace">
+<header class="topbar"><div class="crumb">Home / <b>Dashboard</b></div><div class="search-wrap">⌕<input id="search" placeholder="Cari OLT, PON, JB, ODC, ODP, kabel, core, atau pelanggan..."></div><div class="top-actions"><span>◔</span><span>☾</span><div class="avatar">JS</div><div><b>Administrator</b><small>Network Operations</small></div></div></header>
 <main>
+<section class="hero"><div><span class="eyebrow">NETWORK OPERATIONS CENTER</span><h1>Dashboard</h1><p>Monitor, trace, dan analisis jaringan fiber optik secara terintegrasi.</p></div><div class="hero-actions"><button id="resetDemo" class="ghost">Reset Demo</button><button id="addAsset">＋ Tambah Asset</button></div></section>
 <section class="stats" id="stats"></section>
-<section class="panel"><div class="panel-head"><h2>Network Topology</h2><button id="addAsset">+ Asset</button></div><div id="topology" class="topology"></div></section>
-<section class="grid">
-<div class="panel"><div class="panel-head"><h2>Assets</h2><input id="search" placeholder="Cari kode/nama..."></div><div id="assets"></div></div>
-<div class="panel"><div class="panel-head"><h2>Trace</h2><button id="traceBtn">Trace Customer</button></div><select id="customerSelect"></select><pre id="traceOutput">Pilih customer lalu Trace.</pre></div>
+<section class="dashboard-grid">
+  <section class="panel map-panel"><div class="panel-head"><div><h2>Peta Jaringan Fiber Optik</h2><span class="muted">Live topology overview</span></div><div class="tabs"><button class="tab active">Peta</button><button class="tab">Diagram</button></div></div>
+    <div class="network-map"><div class="map-grid"></div><div class="map-line l1"></div><div class="map-line l2"></div><div class="map-line l3"></div><div class="map-line l4"></div>
+      <div class="map-node n1"><b>OLT</b><span>OLT-01</span></div><div class="map-node n2"><b>PON</b><span>PON-01</span></div><div class="map-node n3"><b>JB</b><span>JB-01</span></div><div class="map-node n4"><b>ODC</b><span>ODC-01</span></div><div class="map-node n5"><b>ODP</b><span>ODP-01</span></div>
+      <div class="customer-pin p1">● CUST-001</div><div class="customer-pin p2">● CUST-002</div><div class="customer-pin p3">● CUST-003</div>
+      <div class="map-legend"><b>Legenda</b><span><i class="c1"></i>OLT</span><span><i class="c2"></i>PON</span><span><i class="c3"></i>JB</span><span><i class="c4"></i>ODC</span><span><i class="c5"></i>ODP</span><span><i class="c6"></i>Customer</span></div>
+    </div>
+  </section>
+  <section class="panel condition"><div class="panel-head"><h2>Kondisi Jaringan</h2><span class="live">● Live</span></div><div class="donut"><div><b>0</b><span>Total Core</span></div></div><div class="legend-list"><span><i class="green"></i>Core Terpakai <b>68.4%</b></span><span><i class="blue"></i>Core Tersedia <b>22.5%</b></span><span><i class="orange"></i>Cadangan <b>8.5%</b></span><span><i class="red"></i>Core Rusak <b>0.6%</b></span></div><hr><h3>Status Layanan</h3><div class="service"><span>🟢 Pelanggan Aktif</span><b>4.120</b></div><div class="service"><span>🔴 Pelanggan Nonaktif</span><b>161</b></div><div class="service"><span>⚠ Gangguan Aktif</span><b>12</b></div><div class="service"><span>🔧 Work Order Open</span><b>28</b></div></section>
 </section>
-<section class="panel"><div class="panel-head"><h2>Core Inventory</h2></div><div id="cores"></div></section>
+<section class="dashboard-grid lower">
+  <section class="panel"><div class="panel-head"><div><h2>Jalur Koneksi Pelanggan</h2><span class="muted">Customer trace</span></div><button id="traceBtn">Trace Customer</button></div><div class="trace-controls"><select id="customerSelect"></select></div><div id="traceOutput" class="trace-output">Pilih customer lalu Trace untuk menghitung jalur aktual.</div></section>
+  <section class="panel"><div class="panel-head"><div><h2>Fiber Analyzer</h2><span class="muted">Optical loss budget</span></div><span class="badge success">Within Budget</span></div><div class="loss"><div><span>Fiber Attenuation</span><b>6.66 dB</b></div><div><span>Connector Loss</span><b>1.20 dB</b></div><div><span>Splice Loss</span><b>0.60 dB</b></div><div><span>Splitter Loss</span><b>10.00 dB</b></div><div class="total"><span>Total Estimated Loss</span><b>19.42 dB</b></div></div></section>
+</section>
+<section class="panel"><div class="panel-head"><div><h2>Asset & Core Inventory</h2><span class="muted">Operational inventory</span></div><div class="toolbar"><button class="ghost">Cable</button><button class="ghost">Core</button><button class="ghost">Splice</button><button class="ghost">Port</button></div></div><div id="assets"></div></section>
+<section class="panel"><div class="panel-head"><h2>Core Inventory Detail</h2><span class="badge">Live inventory</span></div><div id="cores"></div></section>
+<section class="panel incidents"><div class="panel-head"><div><h2>Gangguan Terbaru</h2><span class="muted">Latest incidents</span></div><a>Lihat Semua →</a></div><div class="incident-grid"><div><b>INC-001</b><span>ODP-045 · No Signal</span><em class="danger-text">Open</em></div><div><b>INC-002</b><span>ODC-03 · Kabel Putus</span><em class="warn-text">Proses</em></div><div><b>INC-003</b><span>JB-12 · Redaman Tinggi</span><em class="danger-text">Open</em></div><div><b>INC-004</b><span>ODP-120 · ONU Down</span><em class="success-text">Closed</em></div></div></section>
 </main>
-<dialog id="assetDialog"><form method="dialog" id="assetForm"><h2 id="dialogTitle">Tambah Asset</h2><input type="hidden" id="assetId"><label>Tipe<select id="assetType"><option>OLT</option><option>PON</option><option>JB</option><option>ODC</option><option>ODP</option><option>CUSTOMER</option></select></label><label>Kode<input id="assetCode" required></label><label>Nama<input id="assetName" required></label><label>Status<select id="assetStatus"><option>ACTIVE</option><option>INACTIVE</option><option>MAINTENANCE</option></select></label><div class="actions"><button value="cancel">Batal</button><button id="saveAsset" value="default">Simpan</button></div></form></dialog>
+<footer>FIBER-ANALYZER · Integrated Fiber Network Management <span>© 2026</span></footer>
+</div></div>
+<dialog id="assetDialog"><form method="dialog" id="assetForm"><h2 id="dialogTitle">Tambah Asset</h2><input type="hidden" id="assetId"><label>Tipe<select id="assetType"><option>OLT</option><option>PON</option><option>JB</option><option>ODC</option><option>ODP</option><option>CUSTOMER</option></select></label><label>Kode<input id="assetCode" required></label><label>Nama<input id="assetName" required></label><label>Status<select id="assetStatus"><option>ACTIVE</option><option>INACTIVE</option><option>MAINTENANCE</option></select></label><div class="actions"><button value="cancel" class="ghost">Batal</button><button id="saveAsset" value="default">Simpan</button></div></form></dialog>
 <script src="./app.js" type="module"></script></body></html>
