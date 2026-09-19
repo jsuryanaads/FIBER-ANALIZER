@@ -25,7 +25,7 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK 36
+      - name: Install Android SDK
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
       - name: Validate generator
@@ -35,8 +35,12 @@ jobs:
         run: |
           python3 generator/generate.py             --url "https://example.com"             --name "WebVIEW Sample"             --package "com.jsuryana.webviewsample"
 
-      - name: Make Gradle executable
-        run: chmod +x generated/webview-sample/gradlew || true
+      - name: Install Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Generate Gradle wrapper
+        working-directory: generated/webview-sample
+        run: gradle wrapper --gradle-version 8.13
 
       - name: Build debug APK
         working-directory: generated/webview-sample
