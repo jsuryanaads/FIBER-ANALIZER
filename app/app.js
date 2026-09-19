@@ -23,7 +23,7 @@ async function loadProfile(){
   const {data,error}=await supabase.from("profiles").select("id,organization_id,role,name,username,active").eq("id",user.id).maybeSingle();
   if(error) throw error;
   if(!data && portalRole()==="ADMINISTRATOR"){
-    const {data:boot,error:bootError}=await supabase.rpc("bootstrap_admin");
+    const {data:boot,error:bootError}=await supabase.functions.invoke("bootstrap-admin");
     if(bootError) throw bootError;
     currentProfile=boot;
   }else currentProfile=data||null;
