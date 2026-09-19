@@ -116,8 +116,7 @@ def copy_icon(config: dict, destination: Path) -> None:
         if icon_path.suffix.lower() != ".png":
             raise ValueError("App Icon must be a PNG file")
         shutil.copy2(icon_path, icon_target)
-        fallback = destination / "app" / "src" / "main" / "res" / "drawable" / "ic_launcher.xml"
-        fallback.unlink(missing_ok=True)
+        (destination / "app" / "src" / "main" / "res" / "drawable" / "ic_launcher.xml").unlink(missing_ok=True)
     else:
         fallback = destination / "app" / "src" / "main" / "res" / "drawable" / "ic_launcher.xml"
         if not fallback.exists():
@@ -152,11 +151,15 @@ def main() -> None:
 
     shutil.copytree(TEMPLATE, destination)
 
-    package_path = destination / "app" / "src" / "main" / "java" / "com" / "example" / "webviewgenerator"
-    actual_package_path = destination / "app" / "src" / "main" / "java" / Path(config["package_name"].replace(".", "/"))
-    actual_package_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.move(str(package_path / "MainActivity.kt"), str(actual_package_path / "MainActivity.kt"))
-    shutil.rmtree(package_path, ignore_errors=True)
+    java_root = destination / "app" / "src" / "main" / "java"
+    activities = list(java_root.rglob("MainActivity.kt"))
+    if len(activities) != 1:
+        raise ValueError(f"Expected exactly one MainActivity.kt in template, found {len(activities)}")
+
+    source_activity = activities[0]
+    actual_package_path = java_root / Path(config["package_name"].replace(".", "/"))
+    actual_package_path.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(source_activity), str(actual_package_path / "MainActivity.kt"))
 
     feature = config["features"]
     values = {
