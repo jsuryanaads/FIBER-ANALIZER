@@ -1,326 +1,200 @@
 #!/usr/bin/env python3
-"""Full desktop GUI for WebVIEW-Generator."""
+"""Desktop GUI for WebVIEW-Generator.
 
+The desktop application is only the generator/build controller. Its output remains
+an Android Studio project plus APK/AAB artifacts.
+"""
 from __future__ import annotations
-
-import json
-import os
-import re
-import shutil
-import subprocess
-import sys
-import threading
+import json, os, queue, re, shutil, subprocess, sys, threading
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
+from zipfile import ZIP_DEFLATED, ZipFile
 
-ROOT = Path(__file__).resolve().parents[1]
-GENERATOR = ROOT / "generator" / "generate.py"
-OUTPUT_ROOT = ROOT / "generated"
-
+ROOT=Path(__file__).resolve().parents[1]
+GENERATOR=ROOT/"generator"/"generate.py"
+DEFAULT_OUTPUT=ROOT/"generated"
 
 class GeneratorApp(tk.Tk):
-    def __init__(self) -> None:
+    def __init__(self):
         super().__init__()
-        self.title("WebVIEW Generator")
-        self.geometry("900x720")
-        self.minsize(820, 650)
-        self.configure(padx=22, pady=18)
+        self.title("WebVIEW Generator — Desktop")
+        self.geometry("980x760"); self.minsize(900,680)
+        self.configure(padx=20,pady=16)
+        self.app_name=tk.StringVar(value="My Web App")
+        self.package_name=tk.StringVar(value="com.example.mywebapp")
+        self.website_url=tk.StringVar(value="https://example.com")
+        self.version_name=tk.StringVar(value="1.0.0"); self.version_code=tk.StringVar(value="1")
+        self.primary_color=tk.StringVar(value="#111827"); self.splash_color=tk.StringVar(value="#111827")
+        self.dark_mode=tk.BooleanVar(value=False); self.javascript=tk.BooleanVar(value=True)
+        self.file_upload=tk.BooleanVar(value=True); self.pull_refresh=tk.BooleanVar(value=True)
+        self.external_links=tk.BooleanVar(value=True); self.icon_path=tk.StringVar()
+        self.output_dir=tk.StringVar(value=str(DEFAULT_OUTPUT))
+        self.last_project=None; self.events=queue.Queue(); self.busy=False
+        self._build_ui(); self.after(100,self._drain_events)
 
-        self.app_name = tk.StringVar(value="My Web App")
-        self.package_name = tk.StringVar(value="com.example.mywebapp")
-        self.website_url = tk.StringVar(value="https://example.com")
-        self.version_name = tk.StringVar(value="1.0.0")
-        self.version_code = tk.StringVar(value="1")
-        self.primary_color = tk.StringVar(value="#111827")
-        self.splash_color = tk.StringVar(value="#111827")
-        self.dark_mode = tk.BooleanVar(value=False)
-        self.javascript = tk.BooleanVar(value=True)
-        self.file_upload = tk.BooleanVar(value=True)
-        self.pull_refresh = tk.BooleanVar(value=True)
-        self.external_links = tk.BooleanVar(value=True)
-        self.icon_path = tk.StringVar(value="")
-        self.output_dir = tk.StringVar(value=str(OUTPUT_ROOT))
-        self.last_project = tk.StringVar(value="")
+    def _build_ui(self):
+        header=ttk.Frame(self); header.pack(fill="x")
+        ttk.Label(header,text="WebVIEW Generator",font=("Segoe UI",24,"bold")).pack(anchor="w")
+        ttk.Label(header,text="Desktop generator • Android WebView • Build APK / AAB",font=("Segoe UI",10)).pack(anchor="w",pady=(3,14))
+        nb=ttk.Notebook(self); nb.pack(fill="both",expand=True)
+        project,appearance,features,build=[ttk.Frame(nb,padding=18) for _ in range(4)]
+        for frame,title in zip((project,appearance,features,build),("Project","Appearance","WebView","Build")): nb.add(frame,text=title)
+        for row,(label,var) in enumerate([("App Name",self.app_name),("Package Name",self.package_name),("Website URL",self.website_url),("Version",self.version_name),("Version Code",self.version_code),("Output Folder",self.output_dir)]):
+            self._field(project,label,var,row)
+        ttk.Button(project,text="Browse",command=self.pick_output).grid(row=5,column=2,padx=(8,0))
+        ttk.Label(project,text="Hasil: Android Studio project → APK/AAB").grid(row=6,column=1,columnspan=2,sticky="w",pady=(4,0))
+        self._field(appearance,"Primary Color",self.primary_color,0); self._field(appearance,"Splash Color",self.splash_color,1)
+        ttk.Checkbutton(appearance,text="Force WebView dark mode",variable=self.dark_mode).grid(row=2,column=1,sticky="w",pady=8)
+        ttk.Label(appearance,text="Launcher Icon (PNG, optional)").grid(row=3,column=0,sticky="w",pady=(18,4))
+        ttk.Entry(appearance,textvariable=self.icon_path).grid(row=3,column=1,sticky="ew",padx=12)
+        ttk.Button(appearance,text="Browse",command=self.pick_icon).grid(row=3,column=2)
+        ttk.Label(appearance,text="PNG akan dipasang ke generated Android app. Jika kosong, icon bawaan template digunakan.",wraplength=650).grid(row=4,column=1,columnspan=2,sticky="w",pady=(8,0))
+        appearance.grid_columnconfigure(1,weight=1)
+        for label,var in [("JavaScript",self.javascript),("File Upload",self.file_upload),("Pull to Refresh",self.pull_refresh),("External Links / Custom Schemes",self.external_links)]:
+            ttk.Checkbutton(features,text=label,variable=var).pack(anchor="w",pady=9)
+        ttk.Label(features,text="Pengaturan ini dikompilasi ke aplikasi Android yang dihasilkan.").pack(anchor="w",pady=(14,0))
+        ttk.Label(build,text="Build Console",font=("Segoe UI",12,"bold")).pack(anchor="w")
+        self.log=tk.Text(build,height=24,wrap="word",state="disabled"); self.log.pack(fill="both",expand=True,pady=(8,12))
+        buttons=ttk.Frame(build); buttons.pack(fill="x")
+        self.generate_button=ttk.Button(buttons,text="Generate Project",command=self.generate_async); self.generate_button.pack(side="left")
+        self.debug_button=ttk.Button(buttons,text="Build Debug APK",command=lambda:self.build_async("debug")); self.debug_button.pack(side="left",padx=7)
+        self.release_button=ttk.Button(buttons,text="Build Release APK",command=lambda:self.build_async("release")); self.release_button.pack(side="left")
+        self.aab_button=ttk.Button(buttons,text="Build Release AAB",command=lambda:self.build_async("bundle")); self.aab_button.pack(side="left",padx=7)
+        self.export_button=ttk.Button(buttons,text="Export Project ZIP",command=self.export_zip); self.export_button.pack(side="left")
+        ttk.Button(buttons,text="Open Output",command=self.open_output).pack(side="right")
+        bottom=ttk.Frame(self); bottom.pack(fill="x",pady=(12,0))
+        ttk.Button(bottom,text="Save Config",command=self.save_config).pack(side="right")
+        ttk.Button(bottom,text="Load Config",command=self.load_config).pack(side="right",padx=8)
 
-        self._build_ui()
-
-    def _build_ui(self) -> None:
-        header = ttk.Frame(self)
-        header.pack(fill="x")
-        ttk.Label(header, text="WebVIEW Generator", font=("Segoe UI", 24, "bold")).pack(anchor="w")
-        ttk.Label(
-            header,
-            text="Generate • Brand • Build APK/AAB • Standalone Android WebView",
-            font=("Segoe UI", 10),
-        ).pack(anchor="w", pady=(3, 14))
-
-        notebook = ttk.Notebook(self)
-        notebook.pack(fill="both", expand=True)
-
-        project = ttk.Frame(notebook, padding=18)
-        appearance = ttk.Frame(notebook, padding=18)
-        features = ttk.Frame(notebook, padding=18)
-        build = ttk.Frame(notebook, padding=18)
-        notebook.add(project, text="Project")
-        notebook.add(appearance, text="Appearance")
-        notebook.add(features, text="WebView")
-        notebook.add(build, text="Build")
-
-        self._field(project, "App Name", self.app_name, 0)
-        self._field(project, "Package Name", self.package_name, 1)
-        self._field(project, "Website URL", self.website_url, 2)
-        self._field(project, "Version", self.version_name, 3)
-        self._field(project, "Version Code", self.version_code, 4)
-        self._field(project, "Output Folder", self.output_dir, 5)
-        ttk.Button(project, text="Browse", command=self.pick_output).grid(row=5, column=2, padx=(8, 0))
-        ttk.Label(project, text="Target URL can be any compatible HTTPS/HTTP website.").grid(
-            row=6, column=1, columnspan=2, sticky="w", pady=(6, 0)
-        )
-
-        self._field(appearance, "Primary Color", self.primary_color, 0)
-        self._field(appearance, "Splash Color", self.splash_color, 1)
-        ttk.Checkbutton(appearance, text="Force WebView dark mode", variable=self.dark_mode).grid(
-            row=2, column=1, sticky="w", pady=8
-        )
-        ttk.Label(appearance, text="Launcher Icon (PNG, optional)").grid(
-            row=3, column=0, sticky="w", pady=(18, 4)
-        )
-        ttk.Entry(appearance, textvariable=self.icon_path).grid(row=3, column=1, sticky="ew", padx=12)
-        ttk.Button(appearance, text="Browse", command=self.pick_icon).grid(row=3, column=2)
-        ttk.Label(
-            appearance,
-            text="Custom PNG is copied into the generated APK. Without one, a built-in icon is used.",
-            wraplength=600,
-        ).grid(row=4, column=1, columnspan=2, sticky="w", pady=(8, 0))
-        appearance.grid_columnconfigure(1, weight=1)
-
-        checks = [
-            ("JavaScript", self.javascript),
-            ("File Upload", self.file_upload),
-            ("Pull to Refresh", self.pull_refresh),
-            ("External Links / Custom Schemes", self.external_links),
-        ]
-        for i, (label, variable) in enumerate(checks):
-            ttk.Checkbutton(features, text=label, variable=variable).pack(anchor="w", pady=9)
-        ttk.Label(
-            features,
-            text="These switches are compiled into the generated Android app.",
-            wraplength=650,
-        ).pack(anchor="w", pady=(14, 0))
-
-        ttk.Label(build, text="Build output", font=("Segoe UI", 12, "bold")).pack(anchor="w")
-        self.log = tk.Text(build, height=22, wrap="word", state="disabled")
-        self.log.pack(fill="both", expand=True, pady=(8, 12))
-        buttons = ttk.Frame(build)
-        buttons.pack(fill="x")
-        ttk.Button(buttons, text="Generate Project", command=self.generate).pack(side="left")
-        ttk.Button(buttons, text="Build Debug APK", command=lambda: self.build("debug")).pack(side="left", padx=8)
-        ttk.Button(buttons, text="Build Release APK", command=lambda: self.build("release")).pack(side="left")
-        ttk.Button(buttons, text="Build Release AAB", command=lambda: self.build("bundle")).pack(side="left", padx=8)
-        ttk.Button(buttons, text="Open Output", command=self.open_output).pack(side="right")
-
-        bottom = ttk.Frame(self)
-        bottom.pack(fill="x", pady=(14, 0))
-        ttk.Button(bottom, text="Save Config", command=self.save_config).pack(side="right")
-        ttk.Button(bottom, text="Load Config", command=self.load_config).pack(side="right", padx=8)
-
-    def _field(self, parent, label, variable, row):
-        parent.grid_columnconfigure(1, weight=1)
-        ttk.Label(parent, text=label).grid(row=row, column=0, sticky="w", pady=(0, 10))
-        ttk.Entry(parent, textvariable=variable).grid(
-            row=row, column=1, sticky="ew", pady=(0, 10), padx=(16, 0)
-        )
+    def _field(self,parent,label,var,row):
+        parent.grid_columnconfigure(1,weight=1)
+        ttk.Label(parent,text=label).grid(row=row,column=0,sticky="w",pady=(0,10))
+        ttk.Entry(parent,textvariable=var).grid(row=row,column=1,sticky="ew",pady=(0,10),padx=(16,0))
 
     def pick_icon(self):
-        path = filedialog.askopenfilename(
-            title="Select Launcher Icon",
-            filetypes=[("PNG images", "*.png")],
-        )
-        if path:
-            self.icon_path.set(path)
-
+        path=filedialog.askopenfilename(title="Select Launcher Icon",filetypes=[("PNG images","*.png")])
+        if path:self.icon_path.set(path)
     def pick_output(self):
-        path = filedialog.askdirectory(title="Select Output Folder")
-        if path:
-            self.output_dir.set(path)
+        path=filedialog.askdirectory(title="Select Output Folder")
+        if path:self.output_dir.set(path)
 
     def config(self):
-        return {
-            "app_name": self.app_name.get().strip(),
-            "package_name": self.package_name.get().strip(),
-            "website_url": self.website_url.get().strip(),
-            "version_name": self.version_name.get().strip(),
-            "version_code": int(self.version_code.get()),
-            "theme": {
-                "primary_color": self.primary_color.get().strip(),
-                "splash_color": self.splash_color.get().strip(),
-                "dark_mode": self.dark_mode.get(),
-            },
-            "features": {
-                "javascript": self.javascript.get(),
-                "file_upload": self.file_upload.get(),
-                "pull_to_refresh": self.pull_refresh.get(),
-                "external_links": self.external_links.get(),
-            },
-            "icon_path": self.icon_path.get().strip(),
-        }
+        return {"app_name":self.app_name.get().strip(),"package_name":self.package_name.get().strip(),"website_url":self.website_url.get().strip(),
+                "version_name":self.version_name.get().strip(),"version_code":int(self.version_code.get()),
+                "theme":{"primary_color":self.primary_color.get().strip(),"splash_color":self.splash_color.get().strip(),"dark_mode":self.dark_mode.get()},
+                "features":{"javascript":self.javascript.get(),"file_upload":self.file_upload.get(),"pull_to_refresh":self.pull_refresh.get(),"external_links":self.external_links.get()},
+                "icon_path":self.icon_path.get().strip()}
 
     def validate(self):
-        c = self.config()
-        if not c["app_name"]:
-            raise ValueError("App Name wajib diisi.")
-        if not re.match(r"^https?://", c["website_url"], re.I):
-            raise ValueError("Website URL harus diawali http:// atau https://.")
-        if not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$", c["package_name"]):
-            raise ValueError("Package Name Android tidak valid.")
-        if not re.match(r"^#[0-9a-fA-F]{6}$", c["theme"]["primary_color"]):
-            raise ValueError("Primary Color harus format #RRGGBB.")
-        if not re.match(r"^#[0-9a-fA-F]{6}$", c["theme"]["splash_color"]):
-            raise ValueError("Splash Color harus format #RRGGBB.")
-        if c["version_code"] < 1:
-            raise ValueError("Version Code harus >= 1.")
-        if c["icon_path"] and not Path(c["icon_path"]).is_file():
-            raise ValueError("File icon tidak ditemukan.")
+        c=self.config()
+        if not c["app_name"]: raise ValueError("App Name wajib diisi.")
+        if not re.match(r"^https?://",c["website_url"],re.I): raise ValueError("Website URL harus diawali http:// atau https://.")
+        if not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$",c["package_name"]): raise ValueError("Package Name Android tidak valid.")
+        for key in ("primary_color","splash_color"):
+            if not re.match(r"^#[0-9a-fA-F]{6}$",c["theme"][key]): raise ValueError(f"{key} harus format #RRGGBB.")
+        if c["version_code"]<1: raise ValueError("Version Code harus >= 1.")
+        if c["icon_path"] and not Path(c["icon_path"]).is_file(): raise ValueError("File icon tidak ditemukan.")
         return c
 
     def save_config(self):
         try:
-            c = self.validate()
-            path = filedialog.asksaveasfilename(
-                defaultextension=".json",
-                filetypes=[("JSON", "*.json")],
-            )
-            if path:
-                Path(path).write_text(json.dumps(c, indent=2), encoding="utf-8")
-                self.write_log(f"Config saved: {path}")
-        except Exception as exc:
-            messagebox.showerror("Validation error", str(exc))
+            c=self.validate(); path=filedialog.asksaveasfilename(defaultextension=".json",filetypes=[("JSON","*.json")])
+            if path: Path(path).write_text(json.dumps(c,indent=2),encoding="utf-8"); self.write_log(f"Config saved: {path}")
+        except Exception as exc: messagebox.showerror("Validation error",str(exc))
 
     def load_config(self):
-        path = filedialog.askopenfilename(filetypes=[("JSON", "*.json")])
-        if not path:
-            return
+        path=filedialog.askopenfilename(filetypes=[("JSON","*.json")])
+        if not path:return
         try:
-            c = json.loads(Path(path).read_text(encoding="utf-8"))
-            self.app_name.set(c.get("app_name", ""))
-            self.package_name.set(c.get("package_name", ""))
-            self.website_url.set(c.get("website_url", ""))
-            self.version_name.set(c.get("version_name", "1.0.0"))
-            self.version_code.set(str(c.get("version_code", 1)))
-            theme = c.get("theme", {})
-            self.primary_color.set(theme.get("primary_color", "#111827"))
-            self.splash_color.set(theme.get("splash_color", "#111827"))
-            self.dark_mode.set(bool(theme.get("dark_mode", False)))
-            features = c.get("features", {})
-            self.javascript.set(bool(features.get("javascript", True)))
-            self.file_upload.set(bool(features.get("file_upload", True)))
-            self.pull_refresh.set(bool(features.get("pull_to_refresh", True)))
-            self.external_links.set(bool(features.get("external_links", True)))
-            self.icon_path.set(c.get("icon_path", ""))
+            c=json.loads(Path(path).read_text(encoding="utf-8")); self.app_name.set(c.get("app_name","")); self.package_name.set(c.get("package_name",""))
+            self.website_url.set(c.get("website_url","")); self.version_name.set(c.get("version_name","1.0.0")); self.version_code.set(str(c.get("version_code",1)))
+            t=c.get("theme",{}); self.primary_color.set(t.get("primary_color","#111827")); self.splash_color.set(t.get("splash_color","#111827")); self.dark_mode.set(bool(t.get("dark_mode",False)))
+            f=c.get("features",{}); self.javascript.set(bool(f.get("javascript",True))); self.file_upload.set(bool(f.get("file_upload",True))); self.pull_refresh.set(bool(f.get("pull_to_refresh",True))); self.external_links.set(bool(f.get("external_links",True))); self.icon_path.set(c.get("icon_path",""))
             self.write_log(f"Config loaded: {path}")
-        except Exception as exc:
-            messagebox.showerror("Load error", str(exc))
+        except Exception as exc: messagebox.showerror("Load error",str(exc))
 
-    def write_log(self, message: str):
-        self.log.configure(state="normal")
-        self.log.insert("end", message + "\n")
-        self.log.see("end")
-        self.log.configure(state="disabled")
-
-    def _config_file(self, config: dict) -> Path:
-        temp = ROOT / "generator" / ".active_config.json"
-        temp.write_text(json.dumps(config, indent=2), encoding="utf-8")
-        return temp
-
-    def generate(self, show_message: bool = True) -> bool:
+    def write_log(self,msg):
+        self.log.configure(state="normal"); self.log.insert("end",msg+"\n"); self.log.see("end"); self.log.configure(state="disabled")
+    def _post(self,kind,msg): self.events.put((kind,msg))
+    def _drain_events(self):
         try:
-            c = self.validate()
-            output = Path(self.output_dir.get()).expanduser().resolve() / re.sub(
-                r"[^a-zA-Z0-9]+", "-", c["app_name"].strip()
-            ).strip("-").lower()
-            output.parent.mkdir(parents=True, exist_ok=True)
-            config_path = self._config_file(c)
-            command = [sys.executable, str(GENERATOR), "--config", str(config_path), "--output", str(output)]
-            self.write_log("$ " + " ".join(command))
-            result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
-            if result.stdout:
-                self.write_log(result.stdout.strip())
-            if result.returncode != 0:
-                self.write_log(result.stderr.strip())
-                raise RuntimeError(result.stderr.strip() or "Generator failed")
-            self.last_project.set(str(output))
-            self.write_log(f"PROJECT READY: {output}")
-            if show_message:
-                messagebox.showinfo("Generated", f"Project generated successfully:\n{output}")
-            return True
-        except Exception as exc:
-            if show_message:
-                messagebox.showerror("Generator error", str(exc))
-            self.write_log("ERROR: " + str(exc))
-            return False
+            while True:
+                kind,msg=self.events.get_nowait()
+                if kind=="log": self.write_log(msg)
+                elif kind=="busy": self._set_busy(msg=="1")
+                elif kind=="info": messagebox.showinfo("WebVIEW Generator",msg)
+                elif kind=="error": messagebox.showerror("WebVIEW Generator",msg)
+        except queue.Empty: pass
+        self.after(100,self._drain_events)
+    def _set_busy(self,value):
+        self.busy=value; state="disabled" if value else "normal"
+        for b in (self.generate_button,self.debug_button,self.release_button,self.aab_button,self.export_button): b.configure(state=state)
 
-    def _gradle_command(self, project: Path) -> list[str]:
-        if os.name == "nt":
-            wrapper = project / "gradlew.bat"
-            if wrapper.exists():
-                return [str(wrapper)]
-        else:
-            wrapper = project / "gradlew"
-            if wrapper.exists():
-                return [str(wrapper)]
-        gradle = shutil.which("gradle")
-        if not gradle:
-            raise RuntimeError("Gradle wrapper/Gradle tidak ditemukan. Install Gradle atau gunakan GitHub Actions.")
-        subprocess.run([gradle, "wrapper", "--gradle-version", "8.13"], cwd=project, check=True)
-        return [str(project / ("gradlew.bat" if os.name == "nt" else "gradlew"))]
+    def _make_config_file(self,c):
+        temp=Path(self.output_dir.get()).expanduser().resolve()/".webview-active-config.json"; temp.parent.mkdir(parents=True,exist_ok=True)
+        temp.write_text(json.dumps(c,indent=2),encoding="utf-8"); return temp
+    def _project_path(self,c):
+        slug=re.sub(r"[^a-zA-Z0-9]+","-",c["app_name"]).strip("-").lower() or "webview-app"
+        return Path(self.output_dir.get()).expanduser().resolve()/slug
 
-    def build(self, kind: str):
+    def _generate(self):
+        c=self.validate(); output=self._project_path(c); config_path=self._make_config_file(c)
+        cmd=[sys.executable,str(GENERATOR),"--config",str(config_path),"--output",str(output)]
+        self._post("log","$ "+" ".join(cmd))
+        p=subprocess.Popen(cmd,cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,bufsize=1)
+        for line in p.stdout or []: self._post("log",line.rstrip())
+        code=p.wait(); config_path.unlink(missing_ok=True)
+        if code!=0: raise RuntimeError("Generator gagal. Lihat Build Console untuk detail.")
+        self.last_project=output; self._post("log",f"PROJECT READY: {output}"); return output
+
+    def _gradle_command(self,project):
+        wrapper=project/("gradlew.bat" if os.name=="nt" else "gradlew")
+        if wrapper.exists():
+            if os.name!="nt": wrapper.chmod(wrapper.stat().st_mode|0o111)
+            return [str(wrapper)]
+        gradle=shutil.which("gradle")
+        if not gradle: raise RuntimeError("Gradle tidak ditemukan. Install Gradle atau gunakan GitHub Actions.")
+        result=subprocess.run([gradle,"wrapper","--gradle-version","8.13","--distribution-type","bin"],cwd=project,text=True)
+        if result.returncode!=0: raise RuntimeError("Gagal membuat Gradle wrapper.")
+        if os.name!="nt": wrapper.chmod(wrapper.stat().st_mode|0o111)
+        return [str(wrapper)]
+
+    def _build(self,kind):
+        project=self._generate(); task={"debug":"assembleDebug","release":"assembleRelease","bundle":"bundleRelease"}[kind]
+        self._post("log",f"BUILD START: {task}")
+        p=subprocess.Popen(self._gradle_command(project)+[task,"--no-daemon","--stacktrace"],cwd=project,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,bufsize=1)
+        for line in p.stdout or []: self._post("log",line.rstrip())
+        code=p.wait()
+        if code!=0: raise RuntimeError(f"Gradle build gagal (exit code {code}).")
+        artifact=project/"app"/"build"/"outputs"/("bundle"/"release" if kind=="bundle" else "apk"/("release" if kind=="release" else "debug"))
+        self._post("log",f"BUILD SUCCESS: {task}"); self._post("log",f"ARTIFACT: {artifact}"); return artifact
+
+    def _run_async(self,fn,success):
+        if self.busy:return
+        self._set_busy(True)
         def worker():
-            if not self.generate(show_message=False):
-                return
-            project = Path(self.last_project.get())
-            try:
-                cmd = self._gradle_command(project)
-                task = {"debug": "assembleDebug", "release": "assembleRelease", "bundle": "bundleRelease"}[kind]
-                self.write_log(f"BUILD START: {task}")
-                process = subprocess.Popen(
-                    cmd + [task],
-                    cwd=project,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                )
-                for line in process.stdout or []:
-                    self.write_log(line.rstrip())
-                code = process.wait()
-                if code != 0:
-                    raise RuntimeError(f"Gradle build failed with exit code {code}")
-                self.write_log(f"BUILD SUCCESS: {task}")
-                if kind == "bundle":
-                    artifact = project / "app" / "build" / "outputs" / "bundle" / "release"
-                elif kind == "release":
-                    artifact = project / "app" / "build" / "outputs" / "apk" / "release"
-                else:
-                    artifact = project / "app" / "build" / "outputs" / "apk" / "debug"
-                self.write_log(f"ARTIFACT: {artifact}")
-                self.after(0, lambda: messagebox.showinfo("Build complete", f"Build berhasil:\n{artifact}"))
-            except Exception as exc:
-                self.write_log("BUILD ERROR: " + str(exc))
-                self.after(0, lambda: messagebox.showerror("Build error", str(exc)))
+            try:self._post("info",f"{success}\n{fn()}")
+            except Exception as exc:self._post("log","ERROR: "+str(exc)); self._post("error",str(exc))
+            finally:self._post("busy","0")
+        threading.Thread(target=worker,daemon=True).start()
+    def generate_async(self): self._run_async(self._generate,"Project berhasil dibuat.")
+    def build_async(self,kind): self._run_async(lambda:self._build(kind),f"Build {kind} berhasil.")
 
-        threading.Thread(target=worker, daemon=True).start()
+    def export_zip(self):
+        project=self.last_project
+        if not project or not project.exists(): messagebox.showwarning("Export","Generate project terlebih dahulu."); return
+        target=filedialog.asksaveasfilename(title="Export Android Project",initialfile=f"{project.name}-android-project.zip",defaultextension=".zip",filetypes=[("ZIP archive","*.zip")])
+        if not target:return
+        with ZipFile(target,"w",ZIP_DEFLATED) as z:
+            for p in project.rglob("*"):
+                if p.is_file() and ".gradle" not in p.parts and "build" not in p.parts: z.write(p,p.relative_to(project.parent))
+        self.write_log(f"PROJECT ZIP: {target}"); messagebox.showinfo("Export",f"Project ZIP berhasil dibuat:\n{target}")
 
     def open_output(self):
-        path = Path(self.last_project.get() or self.output_dir.get()).expanduser().resolve()
-        path.mkdir(parents=True, exist_ok=True)
-        if os.name == "nt":
-            os.startfile(path)  # type: ignore[attr-defined]
-        elif sys.platform == "darwin":
-            subprocess.Popen(["open", str(path)])
-        else:
-            subprocess.Popen(["xdg-open", str(path)])
+        path=self.last_project or Path(self.output_dir.get()).expanduser().resolve(); path.mkdir(parents=True,exist_ok=True)
+        if os.name=="nt": os.startfile(path)
+        elif sys.platform=="darwin": subprocess.Popen(["open",str(path)])
+        else: subprocess.Popen(["xdg-open",str(path)])
 
-
-if __name__ == "__main__":
-    GeneratorApp().mainloop()
+if __name__=="__main__": GeneratorApp().mainloop()
