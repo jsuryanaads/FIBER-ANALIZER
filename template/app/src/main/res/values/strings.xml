@@ -1,4 +1,9 @@
 <resources>
     <string name="app_name">__APP_NAME__</string>
     <string name="start_url">__APP_URL__</string>
+    <bool name="feature_javascript">__JAVASCRIPT__</bool>
+    <bool name="feature_file_upload">__FILE_UPLOAD__</bool>
+    <bool name="feature_pull_refresh">__PULL_REFRESH__</bool>
+    <bool name="feature_external_links">__EXTERNAL_LINKS__</bool>
+    <bool name="feature_dark_mode">__DARK_MODE__</bool>
 </resources>
