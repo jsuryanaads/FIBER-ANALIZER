@@ -1,3 +1,6 @@
+import {createClient} from "https://esm.sh/@supabase/supabase-js@2";
+import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from "./supabase-config.js";
+const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 import {shortestTrace,coreTrace,validateGraph} from "./graph-engine.js";
 const KEY="fiber-analyzer-flex-v3";
 // Authentication & RBAC foundation
