@@ -48,7 +48,7 @@ coreConnections:[
 {id:"cc-7",nodeId:"odc-1",inputCableId:"cab-jb3-odc",inputCoreId:"core-6",outputCableId:"cab-odc-odp",outputCoreId:"core-8",connectionType:"SPLICE",status:"ACTIVE"}
 ]};
 let db=JSON.parse(localStorage.getItem(KEY)||"null")||structuredClone(seed);
-db.assets=db.assets||[];
+db.assets=db.assets||[];db.cables=db.cables||[];db.cores=db.cores||[];db.coreConnections=db.coreConnections||[];db.splitterOutputs=db.splitterOutputs||[];
 function migrateLegacyTopology(){
   const legacyPonIds=new Set(db.assets.filter(a=>a.type==="OLT_PON"||a.type==="PON").map(a=>a.id));
   const legacyObts=new Set(db.assets.filter(a=>a.type==="OBT").map(a=>a.id));
