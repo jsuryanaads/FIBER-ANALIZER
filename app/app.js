@@ -94,7 +94,7 @@ normalizeDb();
 const $=id=>document.getElementById(id), save=()=>localStorage.setItem(KEY,JSON.stringify(db));
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 function options(list,value,empty="— Tidak ada —"){return '<option value="">'+empty+'</option>'+list.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===value?"selected":"")+'>'+esc(x.code||x.name||x.id)+'</option>').join("")}
-function render(){renderStats();renderTopologyMap();renderCondition();renderAssets();renderCustomers();renderCores();renderCables();renderOltPorts();renderConnections();renderSplitters();renderSplitterConnections()}
+function render(){renderStats();renderTopologyMap();renderCondition();renderAssets();renderCustomers();renderCores();renderCables();renderOltPorts();renderConnections();renderSplitters();renderSplitterConnections();renderOpticalAnalyzer()}
 function nodeOptions(value=""){return '<option value="">— Pilih node —</option>'+db.assets.map(a=>'<option value="'+esc(a.id)+'" '+(a.id===value?"selected":"")+'>'+esc(a.code)+' — '+esc(a.name)+'</option>').join("")}
 function portOptions(nodeId,value=""){const a=db.assets.find(x=>x.id===nodeId);const count=Math.max(1,Number(a?.port_count)||(a?.type==="OLT"?16:1));return Array.from({length:count},(_,i)=>{const n=i+1;return `<option value="${n}" ${String(n)===String(value)?"selected":""}>Port ${n}</option>`}).join("")} function syncCablePorts(){$("cableFromPort").innerHTML=portOptions($("cableFrom").value,$("cableFromPort").value);$("cableToPort").innerHTML=portOptions($("cableTo").value,$("cableToPort").value)} function openCable(c){c=c||{};$("cableId").value=c.id||"";$("cableCode").value=c.code||"";$("cableFrom").innerHTML=nodeOptions(c.from);$("cableTo").innerHTML=nodeOptions(c.to);$("cableFiberCount").value=c.fiber_count||12;$("cableLength").value=c.length_m||0;$("cableStatus").value=c.status||"ACTIVE";syncCablePorts();$("cableDialog").showModal()}
 function cablesAtNode(nodeId){return (db.cables||[]).filter(c=>c.from===nodeId||c.to===nodeId)}
@@ -165,6 +165,34 @@ $("addConnection").onclick=()=>openConnection();
 $("cableList").onclick=e=>{const edit=e.target.dataset.cableEdit,del=e.target.dataset.cableDel;if(edit)openCable(db.cables.find(c=>c.id===edit));if(del&&confirm("Hapus kabel dan seluruh core kabel ini?")){db.cables=db.cables.filter(c=>c.id!==del);db.cores=db.cores.filter(c=>c.cable_id!==del);db.coreConnections=(db.coreConnections||[]).filter(x=>x.inputCableId!==del&&x.outputCableId!==del);save();render()}};
 $("resetDemo").onclick=()=>{if(confirm("Reset seluruh data demo di browser?")){db=structuredClone(seed);save();render()}};
 render();
+function renderOpticalAnalyzer(){
+  const wavelength=Number($("optWavelength")?.value||1310);
+  const attenuation=Math.max(0,Number($("optAttenuation")?.value||0));
+  const connectorCount=Math.max(0,Number($("optConnectorCount")?.value||0));
+  const connectorLoss=Math.max(0,Number($("optConnectorLoss")?.value||0));
+  const spliceCount=Math.max(0,Number($("optSpliceCount")?.value||0));
+  const spliceLoss=Math.max(0,Number($("optSpliceLoss")?.value||0));
+  const margin=Math.max(0,Number($("optMargin")?.value||0));
+  const budget=Math.max(0,Number($("optBudget")?.value||0));
+  const distance=(db.cables||[]).filter(c=>c.status==="ACTIVE").reduce((sum,c)=>sum+(Number(c.length_m)||0),0)/1000;
+  const fiberLoss=distance*attenuation;
+  const connectorTotal=connectorCount*connectorLoss;
+  const spliceTotal=spliceCount*spliceLoss;
+  const splitterTotal=(db.splitters||[]).reduce((sum,s)=>sum+splitterLoss(s.ratio),0);
+  const total=fiberLoss+connectorTotal+spliceTotal+splitterTotal;
+  const designTotal=total+margin;
+  const within=designTotal<=budget;
+  if($("opticalResult")) $("opticalResult").innerHTML=
+    '<div><span>Wavelength</span><b>'+wavelength+' nm</b></div>'+
+    '<div><span>Active Fiber Distance</span><b>'+distance.toFixed(2)+' km</b></div>'+
+    '<div><span>Fiber Attenuation Loss</span><b>'+fiberLoss.toFixed(2)+' dB</b></div>'+
+    '<div><span>Connector Loss</span><b>'+connectorTotal.toFixed(2)+' dB</b></div>'+
+    '<div><span>Splice Loss</span><b>'+spliceTotal.toFixed(2)+' dB</b></div>'+
+    '<div><span>Splitter Theoretical Loss</span><b>'+splitterTotal.toFixed(2)+' dB</b></div>'+
+    '<div><span>Engineering Margin</span><b>'+margin.toFixed(2)+' dB</b></div>'+
+    '<div class="total"><span>Design Loss</span><b>'+designTotal.toFixed(2)+' dB / '+budget.toFixed(2)+' dB</b></div>';
+  if($("lossVerdict")){$("lossVerdict").textContent=within?"Within Budget":"Over Budget";$("lossVerdict").className="badge "+(within?"success":"danger")}
+}
 function splitterLoss(ratio){const n=Number(String(ratio).split(":")[1])||1;return 10*Math.log10(n)}
 function splitterAllowed(type){return type==="ODC_ODP"||type==="ODC"||type==="ODP"}
 function renderSplitterConnections(){
