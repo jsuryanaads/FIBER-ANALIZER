@@ -39,7 +39,23 @@ create table olts (
   updated_at timestamptz not null default now()
 );
 
-create table pons (
+create table olt_ports (
+  id uuid primary key default gen_random_uuid(),
+  olt_id uuid not null references olts(id) on delete cascade,
+  port_number integer not null,
+  code text not null,
+  capacity integer,
+  status asset_status not null default 'ACTIVE',
+  notes text,
+  created_at timestamptz not null default now(),
+  unique (olt_id, port_number),
+  unique (olt_id, code),
+  check (port_number > 0),
+  check (capacity is null or capacity > 0)
+);
+
+/* PON table intentionally removed: OLT ports are the source endpoints. */
+/* create table olt_ports (
   id uuid primary key default gen_random_uuid(),
   olt_id uuid not null references olts(id) on delete restrict,
   slot integer not null,
@@ -56,6 +72,8 @@ create table pons (
   check (port >= 0),
   check (capacity is null or capacity > 0)
 );
+
+*/
 
 create table jbs (
   id uuid primary key default gen_random_uuid(),
@@ -188,7 +206,7 @@ create table splices (
 create table service_paths (
   id uuid primary key default gen_random_uuid(),
   customer_id uuid not null references customers(id) on delete cascade,
-  pon_id uuid not null references pons(id),
+  olt_port_id uuid not null references olt_ports(id),
   path_status asset_status not null default 'ACTIVE',
   created_at timestamptz not null default now(),
   unique (customer_id)
@@ -201,7 +219,7 @@ create index idx_ports_status on ports(status);
 create index idx_customers_odp on customers(odp_id);
 create index idx_splices_input on splices(input_core_id);
 create index idx_splices_output on splices(output_core_id);
-create index idx_service_paths_pon on service_paths(pon_id);
+create index idx_service_paths_olt_port on service_paths(olt_port_id);
 
 comment on type node_type is 'UI labels: ODC_ODP = BOX ODC-ODP, ODC = BOX ODC, ODP = BOX ODP.';
 
