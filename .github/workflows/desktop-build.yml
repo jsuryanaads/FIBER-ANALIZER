@@ -21,9 +21,15 @@ jobs:
         run: pip install -r requirements-desktop.txt
       - name: Build Windows desktop generator
         run: pyinstaller --noconfirm --clean webview-generator.spec
+      - name: Verify Windows executable
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "dist/WebVIEW-Generator.exe")) {
+            throw "PyInstaller executable not found: dist/WebVIEW-Generator.exe"
+          }
       - name: Package ZIP
         shell: pwsh
-        run: Compress-Archive -Path dist/WebVIEW-Generator/* -DestinationPath WebVIEW-Generator-Windows.zip
+        run: Compress-Archive -Path dist/WebVIEW-Generator.exe -DestinationPath WebVIEW-Generator-Windows.zip -Force
       - name: Upload desktop generator
         uses: actions/upload-artifact@v4
         with:
