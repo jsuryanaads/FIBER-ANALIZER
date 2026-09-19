@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FIBER-ANALYZER — Fiber Network Management</title><link rel="stylesheet" href="./styles.css"></head>
+<title>FIBER-ANALYZER — Fiber Network Management</title><link rel="stylesheet" href="./styles.css"><style>.admin-only{display:none}.admin-nav{display:none}.user-readonly{opacity:.65}</style></head>
 <body>
 <style>
 #authScreen{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#061a2a,#0b3048);display:grid;place-items:center;padding:20px}#authCard{width:min(430px,100%);background:#0d2638;border:1px solid #214963;border-radius:18px;padding:28px;box-shadow:0 20px 60px #0008;color:#eaf5ff}#authCard h2{margin:0 0 8px}#authCard p{color:#9db5c8;margin:0 0 20px}#authCard label{display:block;margin:12px 0;color:#cfe1ee}#authCard input,#authCard select{width:100%;box-sizing:border-box;margin-top:6px;padding:11px;border-radius:9px;border:1px solid #31536a;background:#081b2a;color:#fff}#authCard button{width:100%;margin-top:14px;padding:11px;border:0;border-radius:9px;background:#1595d0;color:#fff;font-weight:700}#authError{min-height:20px;color:#ff8e8e;margin-top:10px;font-size:13px}.auth-note{font-size:12px;color:#87a4b8;margin-top:14px}
@@ -11,7 +11,7 @@
 <aside class="sidebar">
   <div class="brand"><div class="brand-mark">⌁</div><div><strong>FIBER-ANALYZER</strong><small>Fiber Network Management</small></div></div>
   <nav>
-    <a href="#dashboard" class="active">⌂ <span>Dashboard</span></a><a href="#topologyMap">⌖ <span>Topology Map</span></a><a href="#assets">▦ <span>Inventory</span></a><a href="#cableList">⌁ <span>Cable & Core</span></a><a href="#traceOutput">⇄ <span>Trace & Analysis</span></a><a href="#opticalResult">◉ <span>Optical Analyzer</span></a><a href="#incidents">⚠ <span>Incident</span></a><a href="#incidents">✓ <span>Work Order</span></a><a href="#customerSelect">♙ <span>Customer</span></a><a href="#cores">▤ <span>Reports</span></a><a href="#settingsAnchor">⚙ <span>Settings</span></a>
+    <a href="#dashboard" class="active">⌂ <span>Dashboard</span></a><a href="#topologyMap">⌖ <span>Topology Map</span></a><a href="#assets">▦ <span>Inventory</span></a><a href="#cableList">⌁ <span>Cable & Core</span></a><a href="#traceOutput">⇄ <span>Trace & Analysis</span></a><a href="#opticalResult">◉ <span>Optical Analyzer</span></a><a href="#incidents">⚠ <span>Incident</span></a><a href="#incidents">✓ <span>Work Order</span></a><a href="#customerSelect">♙ <span>Customer</span></a><a href="#cores">▤ <span>Reports</span></a><a href="#userManagement" class="admin-nav">♙ <span>Manajemen User</span></a><a href="#settingsAnchor">⚙ <span>Settings</span></a>
   </nav>
   <div class="sidebar-foot"><span class="online-dot"></span> System Online <small>v1.0.0</small></div>
 </aside>
