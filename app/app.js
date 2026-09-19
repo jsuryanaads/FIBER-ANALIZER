@@ -13,7 +13,7 @@ const ROLE_PERMISSIONS={
 };
 let currentUser=null;
 let currentProfile=null;
-const portalRole=()=>{const p=location.pathname.replace(/\\/+$/,"")||"/";return ({"/admin/login":"ADMINISTRATOR","/pengelola/login":"PENGELOLA","/teknisi/login":"TEKNISI"}[p.replace(APP_BASE,"")]||"")};
+const portalRole=()=>{const p=location.pathname.replace(/\/+$/,"")||"/";return ({"/admin/login":"ADMINISTRATOR","/pengelola/login":"PENGELOLA","/teknisi/login":"TEKNISI"}[p.replace(APP_BASE,"")]||"")};
 const portalLabel=role=>({ADMINISTRATOR:"Administrator",PENGELOLA:"Pengelola",TEKNISI:"Teknisi"}[role]||"Portal");
 const roleCan=permission=>!!currentProfile&&((ROLE_PERMISSIONS[currentProfile.role]||[]).includes("*")||(ROLE_PERMISSIONS[currentProfile.role]||[]).includes(permission));
 const canManageUsers=()=>currentProfile?.role==="ADMINISTRATOR";
