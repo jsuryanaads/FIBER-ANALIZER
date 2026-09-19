@@ -67,6 +67,21 @@ export function coreTrace(db,startId,targetId){
    let nextCore=null;if(x.inputCoreId===state.coreId)nextCore=x.outputCoreId;else if(x.outputCoreId===state.coreId)nextCore=x.inputCoreId;
    if(nextCore&&coreById.has(nextCore))next.push({nodeId:state.nodeId,coreId:nextCore,step:{kind:x.connectionType||"SPLICE",connectionId:x.id,coreId:nextCore,toNodeId:state.nodeId,inputCoreId:x.inputCoreId,outputCoreId:x.outputCoreId}});
   }
+  for(const s of db.splitters||[]){
+   if(s.nodeId!==state.nodeId||state.coreId===null)continue;
+   if(s.inputCoreId===state.coreId){
+    const ratio=Number(String(s.ratio).split(":")[1])||0;
+    for(let port=1;port<=ratio;port++){
+     const patch=(db.splitterConnections||[]).find(x=>x.fromSplitterId===s.id&&Number(x.fromPort)===port);
+     if(patch){
+      const target=db.splitters.find(t=>t.id===patch.toSplitterId);
+      if(target)next.push({nodeId:state.nodeId,coreId:state.coreId,step:{kind:"SPLITTER",splitterId:s.id,outputPort:port,toSplitterId:target.id,toNodeId:state.nodeId}});
+     }
+     const out=(db.splitterOutputs||[]).find(x=>x.splitterId===s.id&&Number(x.outputPort)===port);
+     if(out&&coreById.has(out.coreId))next.push({nodeId:state.nodeId,coreId:out.coreId,step:{kind:"SPLITTER_OUTPUT",splitterId:s.id,outputPort:port,coreId:out.coreId,toNodeId:state.nodeId}});
+    }
+   }
+  }
   for(const l of links){
    if(l.from!==state.nodeId&&l.to!==state.nodeId)continue;
    const toNodeId=l.from===state.nodeId?l.to:l.from;
