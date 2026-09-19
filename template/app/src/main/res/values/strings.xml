@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">__APP_NAME__</string>
+    <string name="start_url">__APP_URL__</string>
+</resources>
