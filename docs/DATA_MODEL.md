@@ -109,6 +109,29 @@ Core status:
 - DAMAGED
 - RETIRED
 
+### splitter
+- id
+- node_id
+- ratio (1:2, 1:4, 1:8, 1:16, 1:32, 1:64)
+- stage
+- input_type (`CORE` or `SPLITTER`)
+- input_cable_id
+- input_core_id
+- input_splitter_id
+- input_port
+
+A splitter belongs to a BOX ODC-ODP, BOX ODC, or BOX ODP. Multiple splitters may exist in one box. A splitter output port may be internally patched to the input of another splitter in the same box.
+
+### splitter_connection
+- id
+- node_id
+- from_splitter_id
+- from_port
+- to_splitter_id
+- to_port
+
+This explicitly models internal box patching such as SPL-A Port 1 → SPL-B INPUT and SPL-B Port 4 → SPL-C INPUT.
+
 ### port
 A normalized port entity should represent OLT/PON, JB, ODC and ODP termination points where needed.
 
