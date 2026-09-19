@@ -36,10 +36,8 @@ A cable is a physical segment connecting two nodes. Each cable has its own fiber
 ### olt port details
 - id
 - olt_id
-- slot
-- port
+- port_number
 - code
-- technology
 - capacity
 - status
 - notes
@@ -135,7 +133,7 @@ A splitter belongs to a BOX ODC-ODP, BOX ODC, or BOX ODP. Multiple splitters may
 This explicitly models internal box patching such as SPL-A Port 1 → SPL-B INPUT and SPL-B Port 4 → SPL-C INPUT.
 
 ### port
-A normalized port entity should represent OLT/PON, JB, ODC and ODP termination points where needed.
+A normalized port entity should represent OLT ports, JB, ODC and ODP termination points where needed.
 
 Fields:
 - id
@@ -247,7 +245,7 @@ Supported test types:
 
 ## Relationship summary
 
-All supported node types participate in a many-to-many physical topology through cables. OLT/PON may be the source of a service, but intermediate node ordering is not constrained.
+All supported node types participate in a many-to-many physical topology through cables. OLT ports are the source endpoints of a service, but intermediate node ordering is not constrained.
 
 Cable N—1 origin node and N—1 destination node.
 
