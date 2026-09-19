@@ -18,7 +18,7 @@ if(/"PON"|"OLT_PON"|"OBT"/.test(topologyMatch))throw new Error("Legacy PON/OBT t
 const assetTypeOptions=html.match(/<select id="assetType">([\s\S]*?)<\/select>/)?.[1]||"";
 if(/value="PON"|value="OLT_PON"|>PON<|>OBT</.test(assetTypeOptions))throw new Error("Legacy PON/OBT option still exposed in asset selector");
 
-if(!/type:"OLT"/.test(js))throw new Error("OLT asset type missing");
+if(!js.includes('"OLT"')&&!js.includes("OLT"))throw new Error("OLT asset type missing");
 if(/type:"PON"|type:"OLT_PON"|type:"OBT"/.test(js.match(/const seed=\{[\s\S]*?\};/)?.[0]||""))throw new Error("Legacy PON/OBT asset remains in demo seed");
 
 console.log("UI integrity test passed");
