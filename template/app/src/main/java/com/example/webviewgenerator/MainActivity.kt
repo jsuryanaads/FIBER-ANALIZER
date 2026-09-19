@@ -1,4 +1,4 @@
-package com.example.webviewgenerator
+package __PACKAGE_NAME__
 
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
