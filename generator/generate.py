@@ -107,6 +107,41 @@ def load_config(args: argparse.Namespace) -> dict:
     return config
 
 
+
+def find_android_sdk() -> Path | None:
+    import os
+    candidates = []
+    for name in ("ANDROID_HOME", "ANDROID_SDK_ROOT"):
+        value = os.environ.get(name, "").strip()
+        if value:
+            candidates.append(Path(value).expanduser())
+    home = Path.home()
+    candidates.extend([home / "AppData" / "Local" / "Android" / "Sdk", home / "Android" / "Sdk", home / "Library" / "Android" / "sdk"])
+    if os.name == "nt":
+        candidates.extend([Path("C:/Android/Sdk"), Path("C:/Users/Public/Android/Sdk")])
+    seen = set()
+    for sdk in candidates:
+        if not sdk.is_dir():
+            continue
+        try:
+            key = str(sdk.resolve()).lower()
+        except OSError:
+            key = str(sdk).lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        if (sdk / "platform-tools").is_dir() and ((sdk / "platforms").is_dir() or (sdk / "build-tools").is_dir()):
+            return sdk.resolve()
+    return None
+
+
+def write_local_properties(destination: Path) -> None:
+    sdk = find_android_sdk()
+    if sdk is None:
+        raise RuntimeError("Android SDK tidak ditemukan. Set ANDROID_HOME/ANDROID_SDK_ROOT atau instal Android SDK, lalu generate ulang project.")
+    (destination / "local.properties").write_text(f"sdk.dir={sdk.as_posix()}\\n", encoding="utf-8")
+    print(f"Android SDK: {sdk}")
+
 def copy_icon(config: dict, destination: Path) -> None:
     icon_target = destination / "app" / "src" / "main" / "res" / "drawable" / "ic_launcher.png"
     icon_target.parent.mkdir(parents=True, exist_ok=True)
@@ -182,6 +217,7 @@ def main() -> None:
             replace_tokens(path, values)
 
     copy_icon(config, destination)
+    write_local_properties(destination)
 
     print(f"Generated Android project: {destination}")
     print(f"Package: {config['package_name']}")
