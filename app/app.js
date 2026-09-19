@@ -150,21 +150,66 @@ function normalizeDb(){
 function normalizeOltPorts(){for(const a of db.assets.filter(x=>x.type==="OLT")){const n=Math.max(1,Number(a.port_count)||16);a.port_count=n;a.olt_ports=Array.from({length:n},(_,i)=>a.olt_ports?.[i]||({port_number:i+1,code:`${a.code}-P${i+1}`,status:"AVAILABLE"}))}}
 normalizeOltPorts();
 normalizeDb();
-const save=()=>{
+let syncTimer=null;
+async function readNetworkState(){
+  const org=currentProfile.organization_id;
+  const tables=["network_assets","network_cables","network_cores","network_core_connections","network_splitters","network_splitter_outputs","network_splitter_connections","network_links"];
+  const results={};
+  for(const table of tables){
+    const {data,error}=await supabase.from(table).select("*").eq("organization_id",org);
+    if(error) throw error;
+    results[table]=data||[];
+  }
+  const assets=results.network_assets.map(x=>({id:x.id,type:x.type,code:x.code,name:x.name,status:x.status,port_count:x.port_count,olt_ports:x.olt_ports||undefined,...(x.extra||{})}));
+  const cables=results.network_cables.map(x=>({id:x.id,code:x.code,cable_type:x.cable_type,fiber_count:x.fiber_count,length_m:x.length_m,from:x.from_asset_id,to:x.to_asset_id,fromPort:x.from_port,toPort:x.to_port,status:x.status,condition:x.condition,...(x.extra||{})}));
+  const cores=results.network_cores.map(x=>({id:x.id,cable_id:x.cable_id,core_number:x.core_number,color:x.color,status:x.status,attenuation_db_per_km:x.attenuation_db_per_km,notes:x.notes}));
+  const coreConnections=results.network_core_connections.map(x=>({id:x.id,nodeId:x.node_id,inputCableId:x.input_cable_id,outputCableId:x.output_cable_id,inputCoreId:x.input_core_id,outputCoreId:x.output_core_id,connectionType:x.connection_type,status:x.status,...(x.extra||{})}));
+  const splitters=results.network_splitters.map(x=>({id:x.id,nodeId:x.node_id,ratio:x.ratio,stage:x.stage,inputType:x.input_type,inputSplitterId:x.input_splitter_id,inputPort:x.input_port,...(x.extra||{})}));
+  const splitterOutputs=results.network_splitter_outputs.map(x=>({id:x.id,splitterId:x.splitter_id,outputPort:x.output_port,cableId:x.cable_id,coreId:x.core_id}));
+  const splitterConnections=results.network_splitter_connections.map(x=>({id:x.id,nodeId:x.node_id,fromSplitterId:x.from_splitter_id,fromPort:x.from_port,toSplitterId:x.to_splitter_id,toPort:x.to_port}));
+  const links=results.network_links.filter(x=>x.kind==="SERVICE").map(x=>({id:x.id,from:x.from_asset_id,to:x.to_asset_id,kind:x.kind,...(x.extra||{})}));
+  const logicalLinks=results.network_links.filter(x=>x.kind!=="SERVICE").map(x=>({id:x.id,from:x.from_asset_id,to:x.to_asset_id,kind:x.kind,...(x.extra||{})}));
+  return {assets,cables,cores,coreConnections,splitters,splitterOutputs,splitterConnections,links,logicalLinks,splices:[],};
+}
+async function syncNetworkState(){
+  if(!currentProfile||!roleCan("network.write")) return;
+  const org=currentProfile.organization_id;
+  const rows={
+    network_assets:(db.assets||[]).map(x=>({id:x.id,organization_id:org,type:x.type,code:x.code,name:x.name,status:x.status||"ACTIVE",port_count:x.port_count||null,olt_ports:x.olt_ports||null,extra:Object.fromEntries(Object.entries(x).filter(([k])=>!["id","type","code","name","status","port_count","olt_ports"].includes(k)))})),
+    network_cables:(db.cables||[]).map(x=>({id:x.id,organization_id:org,code:x.code,cable_type:x.cable_type||"FIBER",fiber_count:Number(x.fiber_count)||1,length_m:x.length_m||0,from_asset_id:x.from,to_asset_id:x.to,from_port:x.fromPort||1,to_port:x.toPort||1,status:x.status||"ACTIVE",condition:x.condition||null,extra:{}})),
+    network_cores:(db.cores||[]).map(x=>({id:x.id,organization_id:org,cable_id:x.cable_id,core_number:x.core_number,color:x.color||null,status:x.status||"AVAILABLE",attenuation_db_per_km:x.attenuation_db_per_km||null,notes:x.notes||null})),
+    network_core_connections:(db.coreConnections||[]).map(x=>({id:x.id,organization_id:org,node_id:x.nodeId,input_cable_id:x.inputCableId,output_cable_id:x.outputCableId,input_core_id:x.inputCoreId,output_core_id:x.outputCoreId,connection_type:x.connectionType||"SPLICE",status:x.status||"ACTIVE",extra:{}})),
+    network_splitters:(db.splitters||[]).map(x=>({id:x.id,organization_id:org,node_id:x.nodeId,ratio:x.ratio,stage:x.stage||1,input_type:x.inputType||null,input_splitter_id:x.inputSplitterId||null,input_port:x.inputPort||null,extra:{}})),
+    network_splitter_outputs:(db.splitterOutputs||[]).map(x=>({id:x.id,organization_id:org,splitter_id:x.splitterId,output_port:x.outputPort,cable_id:x.cableId,core_id:x.coreId})),
+    network_splitter_connections:(db.splitterConnections||[]).map(x=>({id:x.id,organization_id:org,node_id:x.nodeId,from_splitter_id:x.fromSplitterId,from_port:x.fromPort,to_splitter_id:x.toSplitterId,to_port:String(x.toPort||"INPUT")})),
+    network_links:[...(db.links||[]),...(db.logicalLinks||[])].map(x=>({id:x.id||crypto.randomUUID(),organization_id:org,from_asset_id:x.from,to_asset_id:x.to,kind:x.kind||"SERVICE",extra:{}}))
+  };
+  for(const [table,data] of Object.entries(rows)){
+    const {data:existing,error:readError}=await supabase.from(table).select("id").eq("organization_id",org);
+    if(readError) throw readError;
+    const wanted=new Set(data.map(x=>x.id));
+    const stale=(existing||[]).map(x=>x.id).filter(id=>!wanted.has(id));
+    if(stale.length){const {error}=await supabase.from(table).delete().in("id",stale);if(error)throw error}
+    if(data.length){const {error}=await supabase.from(table).upsert(data,{onConflict:"id"});if(error)throw error}
+  }
+  await supabase.from("network_state").upsert({organization_id:org,state:db,updated_by:currentUser.id,updated_at:new Date().toISOString()});
+}
+function save(){
   const orgKey=currentProfile?"fiber-analyzer-org-"+currentProfile.organization_id:KEY;
   localStorage.setItem(orgKey,JSON.stringify(db));
-  if(currentProfile) void supabase.from("network_state").upsert({organization_id:currentProfile.organization_id,state:db,updated_by:currentUser.id,updated_at:new Date().toISOString()});
-};
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(()=>syncNetworkState().catch(err=>console.error("Supabase sync failed:",err)),150);
+}
 async function loadOrganizationState(){
   const orgKey="fiber-analyzer-org-"+currentProfile.organization_id;
+  let remote;
+  try{remote=await readNetworkState()}catch(err){console.error("Supabase read failed:",err);remote=null}
   const local=JSON.parse(localStorage.getItem(orgKey)||"null");
-  const {data,error}=await supabase.from("network_state").select("state").eq("organization_id",currentProfile.organization_id).maybeSingle();
-  if(error) throw error;
-  db=data?.state||local||emptyDb();
+  db=remote?.assets?.length||remote?.cables?.length||remote?.cores?.length?remote:(local||emptyDb());
   db.assets=db.assets||[];db.cables=db.cables||[];db.cores=db.cores||[];db.coreConnections=db.coreConnections||[];db.splitterOutputs=db.splitterOutputs||[];db.links=db.links||[];db.logicalLinks=db.logicalLinks||[];db.splices=db.splices||[];db.splitters=db.splitters||[];db.splitterConnections=db.splitterConnections||[];
   migrateLegacyTopology();normalizeOltPorts();normalizeDb();
   localStorage.setItem(orgKey,JSON.stringify(db));
-  if(!data) await supabase.from("network_state").upsert({organization_id:currentProfile.organization_id,state:db,updated_by:currentUser.id,updated_at:new Date().toISOString()});
+  if((!remote||(!remote.assets.length&&!remote.cables.length&&!remote.cores.length))&&local&&roleCan("network.write")) await syncNetworkState();
 }
 function wireNavigation(){document.querySelectorAll("[data-scroll]").forEach(b=>b.onclick=()=>document.querySelector(b.dataset.scroll)?.scrollIntoView({behavior:"smooth",block:"start"}));document.querySelectorAll(".sidebar nav a[href]").forEach(a=>a.onclick=()=>{document.querySelectorAll(".sidebar nav a").forEach(x=>x.classList.remove("active"));a.classList.add("active")})}
 
