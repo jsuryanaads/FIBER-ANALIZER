@@ -1,0 +1,18 @@
+{
+  "app_name": "Example App",
+  "package_name": "com.example.app",
+  "website_url": "https://example.com",
+  "version_name": "1.0.0",
+  "version_code": 1,
+  "theme": {
+    "primary_color": "#111827",
+    "splash_color": "#111827",
+    "dark_mode": false
+  },
+  "features": {
+    "javascript": true,
+    "file_upload": true,
+    "pull_to_refresh": true,
+    "external_links": true
+  }
+}
