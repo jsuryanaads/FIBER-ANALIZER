@@ -11,8 +11,8 @@ android {
         applicationId = "__PACKAGE_NAME__"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = __VERSION_CODE__
+        versionName = "__VERSION_NAME__"
     }
 
     buildTypes {
@@ -37,6 +37,7 @@ android {
 
 dependencies {
     implementation("androidx.core:core-ktx:1.17.0")
+    implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("androidx.webkit:webkit:1.14.0")
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.2.0-beta01")
