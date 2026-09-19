@@ -14,7 +14,7 @@
 <header class="topbar"><div class="crumb">Home / <b>Dashboard</b></div><div class="search-wrap">⌕<input id="search" placeholder="Cari OLT, OTB, JB, BOX ODC-ODP, BOX ODC, BOX ODP, kabel, core, atau pelanggan..."></div><div class="top-actions"><span>◔</span><span>☾</span><div class="avatar">JS</div><div><b>Administrator</b><small>Network Operations</small></div></div></header>
 <main>
 <section class="hero"><div><span class="eyebrow">NETWORK OPERATIONS CENTER</span><h1>Dashboard</h1><p>Monitor, trace, dan analisis jaringan fiber optik secara terintegrasi.</p></div><div class="hero-actions"><button id="resetDemo" class="ghost">Reset Demo</button><button id="addAsset">＋ Tambah Asset</button></div></section>
-<section class="stats" id="stats"></section>
+<section class="stats" id="stats"></section><section class="panel"><div class="panel-head"><div><h2>OLT Port Inventory</h2><span class="muted">Port fisik OLT dan kabel yang terhubung</span></div><span class="badge">OLT PORT</span></div><div id="oltPorts"></div></section>
 <section class="dashboard-grid">
   <section class="panel map-panel"><div class="panel-head"><div><h2>Peta Jaringan Fiber Optik</h2><span class="muted">Live topology overview</span></div><div class="tabs"><button class="tab active">Peta</button><button class="tab">Diagram</button></div></div>
     <div id="topologyMap" class="network-map" aria-label="Peta jaringan fiber optik"></div></section><section class="panel condition"><div class="panel-head"><h2>Kondisi Jaringan</h2><span class="live">● Live</span></div><div id="coreCondition"></div><hr><h3>Status Layanan</h3><div id="serviceStatus"></div></section>
