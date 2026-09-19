@@ -5,5 +5,12 @@
         <item name="android:navigationBarColor">@color/webview_primary</item>
         <item name="android:statusBarColor">@color/webview_primary</item>
         <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowBackground">@color/webview_background</item>
+    </style>
+
+    <style name="Theme.WebViewGenerator.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/webview_splash</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.WebViewGenerator</item>
     </style>
 </resources>
