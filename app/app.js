@@ -272,3 +272,6 @@ function renderOpticalAnalyzer(){
   if($("lossVerdict")){$("lossVerdict").textContent=trace.found?(within?"Within Budget":"Over Budget"):"Route Required";$("lossVerdict").className="badge "+(trace.found?(within?"success":"danger"):"")}
 }
 
+
+if(!initAuth()) throw new Error("AUTH_REQUIRED");
+render();
