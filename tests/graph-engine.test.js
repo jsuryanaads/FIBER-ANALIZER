@@ -27,7 +27,7 @@ const db={
   {id:"m2",nodeId:"jb1",inputCableId:"c2",inputCoreId:"k2",outputCableId:"c3",outputCoreId:"k3",connectionType:"SPLICE",status:"ACTIVE"},
   {id:"m3",nodeId:"jb2",inputCableId:"c3",inputCoreId:"k3",outputCableId:"c4",outputCoreId:"k4",connectionType:"SPLICE",status:"ACTIVE"},
   {id:"m4",nodeId:"dist",inputCableId:"c4",inputCoreId:"k4",outputCableId:"c5",outputCoreId:"k5",connectionType:"SPLICE",status:"ACTIVE"},
-  {id:"m5",nodeId:"jb2",inputCableId:"c5",inputCoreId:"k5",outputCableId:"c3",outputCoreId:"k3",connectionType:"SPLICE",status:"SPLICE",status:"ACTIVE"},
+  {id:"m5",nodeId:"jb2",inputCableId:"c5",inputCoreId:"k5",outputCableId:"c3",outputCoreId:"k3",connectionType:"SPLICE",status:"ACTIVE"},
   {id:"m6",nodeId:"jb1",inputCableId:"c2",inputCoreId:"k2",outputCableId:"c6",outputCoreId:"k6",connectionType:"SPLICE",status:"ACTIVE"},
   {id:"m7",nodeId:"odc",inputCableId:"c6",inputCoreId:"k6",outputCableId:"c7",outputCoreId:"k7",connectionType:"SPLICE",status:"ACTIVE"}
  ],
