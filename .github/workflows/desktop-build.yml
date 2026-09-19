@@ -1,0 +1,30 @@
+name: Desktop Generator Build
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "desktop-v*"
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install desktop build dependency
+        run: pip install -r requirements-desktop.txt
+      - name: Build Windows desktop generator
+        run: pyinstaller --noconfirm --clean webview-generator.spec
+      - name: Package ZIP
+        shell: pwsh
+        run: Compress-Archive -Path dist/WebVIEW-Generator/* -DestinationPath WebVIEW-Generator-Windows.zip
+      - name: Upload desktop generator
+        uses: actions/upload-artifact@v4
+        with:
+          name: WebVIEW-Generator-Windows
+          path: WebVIEW-Generator-Windows.zip
