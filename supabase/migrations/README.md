@@ -12,6 +12,7 @@ The production Supabase project currently reports these applied migrations:
 8. 20260920065754_master_pro_performance_indexes
 9. 20260920065805_master_pro_foreign_key_indexes
 10. 20260920071449_enable_fiber_analyzer_realtime
+11. 20260920073746_customer_service_package
 
 The remote migration history is authoritative until the SQL files are pulled into this repository with the Supabase CLI.
 
