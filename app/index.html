@@ -57,6 +57,44 @@
     <a href="./cable-core.html">Kelola Core & Kabel →</a>
   </div>
 </section>
+<section class="panel fiber-path-spec page-section page-dashboard-section">
+  <div class="panel-head"><div><span class="eyebrow">CORE CONTINUITY MODEL</span><h2>Contoh Jalur OLT → OTB → JB → JB</h2><span class="muted">Satu port OLT dapat dipasangkan ke satu port OTB. Dari OTB ke JB digunakan kabel multi-core, lalu continuity diteruskan core-per-core di setiap JB.</span></div><span class="badge">4 CORE PATH</span></div>
+  <div class="path-spec-grid">
+    <div class="path-stage">
+      <div class="stage-title"><b>01</b> OLT → OTB</div>
+      <div class="mapping-list">
+        <div><span>OLT Port 1</span><i>→</i><strong>OTB Port 1</strong></div>
+        <div><span>OLT Port 2</span><i>→</i><strong>OTB Port 2</strong></div>
+        <div><span>OLT Port 3</span><i>→</i><strong>OTB Port 3</strong></div>
+        <div><span>OLT Port 4</span><i>→</i><strong>OTB Port 4</strong></div>
+      </div>
+      <small>4 port link / 4 jalur fiber masuk ke OTB.</small>
+    </div>
+    <div class="path-arrow">➜</div>
+    <div class="path-stage">
+      <div class="stage-title"><b>02</b> OTB → JB 1</div>
+      <div class="mapping-list core">
+        <div><span>Kabel OTB-JB1</span><i>Core 1</i><strong>→ JB1</strong></div>
+        <div><span>Kabel OTB-JB1</span><i>Core 2</i><strong>→ JB1</strong></div>
+        <div><span>Kabel OTB-JB1</span><i>Core 3</i><strong>→ JB1</strong></div>
+        <div><span>Kabel OTB-JB1</span><i>Core 4</i><strong>→ JB1</strong></div>
+      </div>
+      <small>Kabel 4C: Core 1–4 aktif.</small>
+    </div>
+    <div class="path-arrow">➜</div>
+    <div class="path-stage">
+      <div class="stage-title"><b>03</b> JB 1 → JB 2</div>
+      <div class="mapping-list core">
+        <div><span>JB1 Core 1</span><i>→</i><strong>JB2 Core 1</strong></div>
+        <div><span>JB1 Core 2</span><i>→</i><strong>JB2 Core 2</strong></div>
+        <div><span>JB1 Core 3</span><i>→</i><strong>JB2 Core 3</strong></div>
+        <div><span>JB1 Core 4</span><i>→</i><strong>JB2 Core 4</strong></div>
+      </div>
+      <small>Kabel JB1-JB2 4C: continuity 1:1.</small>
+    </div>
+  </div>
+  <div class="path-rule"><b>ATURAN:</b> Port adalah terminasi fisik; Core adalah jalur fiber. Trace hanya dianggap tersambung jika setiap tahap memiliki endpoint dan continuity core yang valid.</div>
+</section>
 <section class="stats network-kpis page-section page-dashboard-section">
   <div class="stat kpi-olt"><span>OLT Port</span><b>6</b><em>Port 1–6</em></div>
   <div class="stat kpi-otb"><span>OTB</span><b>1</b><em>Titik terminasi</em></div>
