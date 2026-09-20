@@ -385,7 +385,7 @@ function applyPageContext(){
     if(main&&!document.getElementById("customerContextBanner")){
       const target=page==="trace-analysis"?"./customer.html":"./trace-analysis.html";
       const label=page==="trace-analysis"?"Trace jalur layanan":"Analisis optical route";
-      main.insertAdjacentHTML("afterbegin",`<section id="customerContextBanner" class="panel page-section" style="margin-bottom:16px"><div class="panel-head"><div><span class="eyebrow">CUSTOMER CONTEXT</span><h2>${esc(customer.code)} — ${esc(customer.name)}</h2><span class="muted">Konteks customer dipertahankan saat berpindah modul.</span></div><div class="cable-actions"><a class="ghost" href="${target}">${label}</a><a class="ghost" href="./customer.html">Kembali ke Customer</a></div></div></section>`);
+      main.insertAdjacentHTML("afterbegin",`<section id="customerContextBanner" class="panel" style="margin-bottom:16px"><div class="panel-head"><div><span class="eyebrow">CUSTOMER CONTEXT</span><h2>${esc(customer.code)} — ${esc(customer.name)}</h2><span class="muted">Konteks customer dipertahankan saat berpindah modul.</span></div><div class="cable-actions"><a class="ghost" href="${target}">${label}</a><a class="ghost" href="./customer.html">Kembali ke Customer</a></div></div></section>`);
     }
   }
   if(page==="trace-analysis"&&$("customerSelect"))requestAnimationFrame(()=>$("traceBtn")?.click());
