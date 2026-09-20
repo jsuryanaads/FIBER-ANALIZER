@@ -26,6 +26,9 @@ if(!app.includes("async function syncNetworkData"))throw new Error("Normalized n
 if(!app.includes("async function syncOltFoundation"))throw new Error("Normalized OLT foundation persistence service missing");
 if(!app.includes('from("olt_ports")'))throw new Error("OLT port foundation table is not wired");
 if(!app.includes("syncOltFoundation()"))throw new Error("OLT foundation sync is not part of persistence flow");
+if(!app.includes('from("network_nodes")')||!app.includes('from("cables")')||!app.includes('from("cable_cores")')||!app.includes('from("splices")')||!app.includes('from("service_paths")'))throw new Error("Fiber foundation reconciliation is incomplete");
+if(!app.includes("function navigateContext")||!app.includes("function applyPageContext"))throw new Error("Contextual cross-page navigation missing");
+if(!app.includes('data-customer-context'))throw new Error("Customer contextual actions missing");
 for(const form of ["assetForm","cableForm","connectionForm","splitterForm","splitterConnectionForm"])if(!app.includes(`$("`+form+`").onsubmit`))throw new Error(`Persistence handler missing: ${form}`);
 if(!app.includes("from(\"customers\")"))throw new Error("Normalized customer table is not wired");
 if(!workflow.includes("branches:\n      - main"))throw new Error("Pages deployment must be main-only");
