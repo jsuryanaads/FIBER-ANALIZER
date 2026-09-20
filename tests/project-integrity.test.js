@@ -11,6 +11,10 @@ const app=fs.readFileSync(path.join(appDir,"app.js"),"utf8");
 const workflow=fs.readFileSync(path.join(root,".github/workflows/deploy-pages.yml"),"utf8");
 const builder=fs.readFileSync(path.join(root,"scripts/build-pages.mjs"),"utf8");
 const readme=fs.readFileSync(path.join(root,"README.md"),"utf8");
+const supabaseConfig=fs.readFileSync(path.join(root,"supabase/config.toml"),"utf8");
+if(!fs.existsSync(path.join(root,"supabase/functions/admin-user/index.ts")))throw new Error("admin-user source missing");
+if(!fs.existsSync(path.join(root,"supabase/functions/bootstrap-admin/index.ts")))throw new Error("bootstrap-admin source missing");
+if(!supabaseConfig.includes('project_id = "xdfwtsixuwikijknkvlz"'))throw new Error("Supabase project config missing");
 
 if(!index.includes('<base href="/FIBER-ANALIZER/">'))throw new Error("GitHub Pages base path missing");
 if(!index.includes('src="./app.js?v='))throw new Error("app.js cache-busting version missing");
