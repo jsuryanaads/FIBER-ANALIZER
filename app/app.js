@@ -234,20 +234,22 @@ function normalizeDb(){
   db.splitterConnections=db.splitterConnections.filter(x=>splitterIds.has(x.fromSplitterId)&&splitterIds.has(x.toSplitterId)&&db.assets.some(a=>a.id===x.nodeId));
   db.coreConnections=db.coreConnections.filter(x=>cableIds.has(x.inputCableId)&&cableIds.has(x.outputCableId)&&coreIds.has(x.inputCoreId)&&coreIds.has(x.outputCoreId)&&db.assets.some(a=>a.id===x.nodeId));
 }
-function normalizeOltPorts(){for(const a of db.assets.filter(x=>x.type==="OLT")){const n=Math.max(1,Number(a.port_count)||16);a.port_count=n;a.olt_ports=Array.from({length:n},(_,i)=>a.olt_ports?.[i]||({port_number:i+1,code:`${a.code}-P${i+1}`,status:"AVAILABLE"}))}}
+function normalizeOltPorts(){for(const a of db.assets.filter(x=>x.type==="OLT")){const n=Math.max(1,Number(a.port_count)||16);a.port_count=n;a.olt_ports=Array.from({length:n},(_,i)=>{const p=a.olt_ports?.[i]||{};return {id:p.id||crypto.randomUUID(),port_number:i+1,code:p.code||`${a.code}-P${i+1}`,status:p.status||"ACTIVE",capacity:p.capacity||1,notes:p.notes||null}})}}
 normalizeOltPorts();
 normalizeDb();
 let syncTimer=null;
 async function readNetworkData(){
   const org=currentProfile.organization_id;
-  const tables=["network_assets","network_cables","network_cores","network_core_connections","network_splitters","network_splitter_outputs","network_splitter_connections","network_links"];
+  const tables=["network_assets","network_cables","network_cores","network_core_connections","network_splitters","network_splitter_outputs","network_splitter_connections","network_links","olt_ports"];
   const results={};
   for(const table of tables){
     const {data,error}=await supabase.from(table).select("*").eq("organization_id",org);
     if(error) throw error;
     results[table]=data||[];
   }
-  const assets=results.network_assets.map(x=>({id:x.id,type:x.type,code:x.code,name:x.name,status:x.status,port_count:x.port_count,olt_ports:x.olt_ports||undefined,...(x.extra||{})}));
+  const foundationPorts=results.olt_ports.map(x=>({id:x.id,olt_id:x.olt_id,port_number:x.port_number,code:x.code,status:x.status,capacity:x.capacity,notes:x.notes}));
+  const portsByOlt=new Map();for(const p of foundationPorts){const list=portsByOlt.get(p.olt_id)||[];list.push(p);portsByOlt.set(p.olt_id,list)}
+  const assets=results.network_assets.map(x=>{const foundation=portsByOlt.get(x.id)||[];return {id:x.id,type:x.type,code:x.code,name:x.name,status:x.status,port_count:x.port_count,olt_ports:foundation.length?foundation.sort((a,b)=>a.port_number-b.port_number):x.olt_ports||undefined,...(x.extra||{})}});
   const cables=results.network_cables.map(x=>({id:x.id,code:x.code,cable_type:x.cable_type,fiber_count:x.fiber_count,length_m:x.length_m,from:x.from_asset_id,to:x.to_asset_id,fromPort:x.from_port,toPort:x.to_port,status:x.status,condition:x.condition,...(x.extra||{})}));
   const cores=results.network_cores.map(x=>({id:x.id,cable_id:x.cable_id,core_number:x.core_number,color:x.color,status:x.status,attenuation_db_per_km:x.attenuation_db_per_km,notes:x.notes}));
   const coreConnections=results.network_core_connections.map(x=>({id:x.id,nodeId:x.node_id,inputCableId:x.input_cable_id,outputCableId:x.output_cable_id,inputCoreId:x.input_core_id,outputCoreId:x.output_core_id,connectionType:x.connection_type,status:x.status,...(x.extra||{})}));
@@ -257,6 +259,14 @@ async function readNetworkData(){
   const links=results.network_links.filter(x=>x.kind==="SERVICE").map(x=>({id:x.id,from:x.from_asset_id,to:x.to_asset_id,kind:x.kind,...(x.extra||{})}));
   const logicalLinks=results.network_links.filter(x=>x.kind!=="SERVICE").map(x=>({id:x.id,from:x.from_asset_id,to:x.to_asset_id,kind:x.kind,...(x.extra||{})}));
   return {assets,cables,cores,coreConnections,splitters,splitterOutputs,splitterConnections,links,logicalLinks,splices:[],};
+}
+async function syncOltFoundation(){
+  if(!currentProfile||!roleCan("network.write")) return;
+  const org=currentProfile.organization_id;
+  const olts=(db.assets||[]).filter(x=>x.type==="OLT").map(x=>({id:x.id,organization_id:org,code:x.code,name:x.name,vendor:null,model:null,serial_number:null,management_ip:null,location_id:null,status:["ACTIVE","INACTIVE","MAINTENANCE","RETIRED"].includes(x.status)?x.status:"ACTIVE",notes:null}));
+  if(olts.length){const {error}=await supabase.from("olts").upsert(olts,{onConflict:"id"});if(error)throw error}
+  const ports=olts.flatMap(o=>{const asset=db.assets.find(x=>x.id===o.id);return (asset?.olt_ports||[]).map(p=>({id:p.id||crypto.randomUUID(),organization_id:org,olt_id:o.id,port_number:Number(p.port_number)||1,code:p.code||o.code+"-P"+(p.port_number||1),capacity:Number(p.capacity)||1,status:["ACTIVE","INACTIVE","MAINTENANCE","RETIRED"].includes(p.status)?p.status:"ACTIVE",notes:p.notes||null}))});
+  if(ports.length){const {error}=await supabase.from("olt_ports").upsert(ports,{onConflict:"id"});if(error)throw error}
 }
 async function syncNetworkData(){
   if(!currentProfile||!roleCan("network.write")) return;
@@ -283,7 +293,7 @@ async function syncNetworkData(){
 function save(){
   if(!currentProfile)return;
   clearTimeout(syncTimer);
-  syncTimer=setTimeout(()=>Promise.all([syncNetworkData(),syncOperationalData(),syncCustomers()]).catch(err=>{
+  syncTimer=setTimeout(()=>Promise.all([syncNetworkData(),syncOltFoundation(),syncOperationalData(),syncCustomers()]).catch(err=>{
     console.error("Supabase save failed:",err);
     setRealtimeStatus("ERROR",err.message||"Supabase save failed");
   }),150);
