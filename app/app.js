@@ -28,7 +28,7 @@ function subscribe(){state.sub=supabase.channel("fiber-live").on("postgres_chang
 function setupPage(){
  document.querySelectorAll("[data-page-link]").forEach(a=>{if(a.dataset.pageLink===page)a.classList.add("active")});
  const names={"dashboard":"Dashboard","cable-core":"Cable & Core","trace-analysis":"Trace","optical-analyzer":"Optical Analyzer","work-order":"Work Order"};$("pageTitle").textContent=names[page]||page.replaceAll("-"," ");
- document.querySelectorAll(".page-section").forEach(s=>s.classList.toggle("active",s.classList.contains("page-"+page+"-section")));
+ const sectionClass={dashboard:"page-dashboard-section",topology:"page-topology-section",inventory:"page-inventory-section","cable-core":"page-cable-section","trace-analysis":"page-trace-section","optical-analyzer":"page-optical-section",incident:"page-incident-section","work-order":"page-workorder-section",customer:"page-customer-section",reports:"page-reports-section",users:"page-users-section",settings:"page-settings-section"}[page]||"page-dashboard-section";document.querySelectorAll(".page-section").forEach(s=>s.classList.toggle("active",s.classList.contains(sectionClass)));
  $("menuBtn").onclick=()=>$("sidebar").classList.toggle("open");
  $("logoutBtn").onclick=async()=>{await supabase.auth.signOut();location.reload()};
  document.addEventListener("click",e=>{const a=e.target.closest("[data-action]");if(!a)return;if(a.dataset.action==="new-asset")$("assetDialog").showModal();if(a.dataset.action==="new-cable"){fillAssets();$("cableDialog").showModal()}if(a.dataset.action==="new-map"){fillMaps();$("mapDialog").showModal()}});
