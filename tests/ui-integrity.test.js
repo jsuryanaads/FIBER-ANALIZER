@@ -52,5 +52,7 @@ if(!js.includes("remoteReadOk"))throw new Error("Supabase read-failure guard mis
 if(!js.includes("Data organisasi tidak dapat dibaca dari Supabase"))throw new Error("Remote/local data safety guard missing");
 
 if(!html.includes('id="incidentDialog"')||!html.includes('id="workOrderDialog"')||!html.includes('id="customerDialog"'))throw new Error("Operational dialogs missing");
+if(!js.includes("function ensureOperationalUI()")||!js.includes("ensureOperationalUI();"))throw new Error("Shared operational UI bootstrap missing");
+if(!js.includes('page==="incident"&&!$(\"addIncident\")'))throw new Error("Incident page operational UI bootstrap missing");
 if(!js.includes("function renderIncidents()")||!js.includes('supabase.from("incidents").insert')||!js.includes('supabase.from("work_orders").insert'))throw new Error("Operational CRUD handlers missing");
 if(!js.includes('requirePermission("customer.write")'))throw new Error("Customer RBAC guard missing");
