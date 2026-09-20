@@ -18,6 +18,7 @@ if(!supabaseConfig.includes('project_id = "xdfwtsixuwikijknkvlz"'))throw new Err
 
 if(!index.includes('<base href="/FIBER-ANALIZER/">'))throw new Error("GitHub Pages base path missing");
 if(!index.includes('src="./app.js?v='))throw new Error("app.js cache-busting version missing");
+if(!/^\d+\.\d+\.\d+$/.test(JSON.parse(fs.readFileSync(path.join(root,"package.json"),"utf8")).version||""))throw new Error("Application version must use MAJOR.MINOR.PATCH");
 if(!index.includes('data-page="dashboard"'))throw new Error("Canonical dashboard page marker missing");
 if(!index.includes("__APP_VERSION__"))throw new Error("Application version placeholder missing");
 if(!index.includes('id="appYear"'))throw new Error("Automatic footer year missing");
