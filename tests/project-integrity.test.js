@@ -24,9 +24,9 @@ if(app.includes("localStorage"))throw new Error("Network data must not use local
 if(app.includes("from(\"network_state\").upsert"))throw new Error("Legacy network_state snapshot must not be written");
 if(!app.includes("async function syncNetworkData"))throw new Error("Normalized network persistence service missing");
 if(!app.includes("async function syncOltFoundation"))throw new Error("Normalized OLT foundation persistence service missing");
-if(!app.includes('from("olt_ports")'))throw new Error("OLT port foundation table is not wired");
+if(!app.includes('"olt_ports"'))throw new Error("OLT port foundation table is not wired");
 if(!app.includes("syncOltFoundation()"))throw new Error("OLT foundation sync is not part of persistence flow");
-if(!app.includes('from("network_nodes")')||!app.includes('from("cables")')||!app.includes('from("cable_cores")')||!app.includes('from("splices")')||!app.includes('from("service_paths")'))throw new Error("Fiber foundation reconciliation is incomplete");
+if(!app.includes('"network_nodes"')||!app.includes('"cables"')||!app.includes('"cable_cores"')||!app.includes('"splices"')||!app.includes('"service_paths"'))throw new Error("Fiber foundation reconciliation is incomplete");
 if(!app.includes("function navigateContext")||!app.includes("function applyPageContext"))throw new Error("Contextual cross-page navigation missing");
 if(!app.includes('data-customer-context'))throw new Error("Customer contextual actions missing");
 for(const form of ["assetForm","cableForm","connectionForm","splitterForm","splitterConnectionForm"])if(!app.includes(`$("`+form+`").onsubmit`))throw new Error(`Persistence handler missing: ${form}`);
