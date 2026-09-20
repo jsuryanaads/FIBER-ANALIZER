@@ -516,10 +516,12 @@ function renderTopologyMap(){
 async function loadOperationalData(){
   if(!currentProfile)return;
   const org=currentProfile.organization_id;
-  const [{data:incidents},{data:workOrders}]=await Promise.all([
+  const [{data:incidents,error:incidentError},{data:workOrders,error:workOrderError}]=await Promise.all([
     supabase.from("incidents").select("*").eq("organization_id",org).order("created_at",{ascending:false}),
     supabase.from("work_orders").select("*").eq("organization_id",org).order("created_at",{ascending:false})
   ]);
+  if(incidentError)throw incidentError;
+  if(workOrderError)throw workOrderError;
   db.incidents=incidents||[];db.workOrders=workOrders||[];
 }
 async function syncOperationalData(){
@@ -535,6 +537,100 @@ async function syncOperationalData(){
   };
   await sync("incidents","id",db.incidents);await sync("work_orders","id",db.workOrders);
 }
+let realtimeChannel=null;
+let realtimeRefreshTimer=null;
+let realtimeStatus="CONNECTING";
+
+function setRealtimeStatus(status,message=""){
+  realtimeStatus=status;
+  const el=$("realtimeStatus");
+  if(!el)return;
+  const labels={LIVE:"LIVE",CONNECTING:"CONNECTING",OFFLINE:"OFFLINE",ERROR:"RETRY"};
+  el.textContent=labels[status]||status;
+  el.className="realtime-status "+String(status).toLowerCase();
+  el.title=message||("Supabase Realtime: "+(labels[status]||status));
+}
+
+function ensureRealtimeUI(){
+  if($("realtimeStatus"))return;
+  const host=document.querySelector(".top-actions");
+  if(!host)return;
+  const el=document.createElement("span");
+  el.id="realtimeStatus";
+  el.className="realtime-status connecting";
+  el.textContent="CONNECTING";
+  el.title="Supabase Realtime";
+  host.insertBefore(el,host.firstElementChild);
+}
+
+async function refreshRealtimeData(){
+  if(!currentProfile)return;
+  try{
+    const [network,operational]=await Promise.all([
+      readNetworkState(),
+      (async()=>{
+        const org=currentProfile.organization_id;
+        const [{data:incidents,error:incidentError},{data:workOrders,error:workOrderError}]=await Promise.all([
+          supabase.from("incidents").select("*").eq("organization_id",org).order("created_at",{ascending:false}),
+          supabase.from("work_orders").select("*").eq("organization_id",org).order("created_at",{ascending:false})
+        ]);
+        if(incidentError)throw incidentError;
+        if(workOrderError)throw workOrderError;
+        return {incidents:incidents||[],workOrders:workOrders||[]};
+      })()
+    ]);
+    db={...network,...operational};
+    db.assets=db.assets||[];db.cables=db.cables||[];db.cores=db.cores||[];db.coreConnections=db.coreConnections||[];
+    db.splitters=db.splitters||[];db.splitterOutputs=db.splitterOutputs||[];db.splitterConnections=db.splitterConnections||[];
+    db.links=db.links||[];db.logicalLinks=db.logicalLinks||[];db.splices=db.splices||[];
+    normalizeOltPorts();normalizeDb();
+    localStorage.setItem("fiber-analyzer-org-"+currentProfile.organization_id,JSON.stringify(db));
+    render();
+    if(currentProfile.role==="ADMINISTRATOR")renderUsers();
+    setRealtimeStatus("LIVE","Data real-time tersinkron.");
+  }catch(err){
+    console.error("Realtime refresh failed:",err);
+    setRealtimeStatus("ERROR",err.message||"Realtime refresh gagal.");
+  }
+}
+
+function scheduleRealtimeRefresh(){
+  clearTimeout(realtimeRefreshTimer);
+  realtimeRefreshTimer=setTimeout(()=>refreshRealtimeData(),180);
+}
+
+function setupRealtime(){
+  ensureRealtimeUI();
+  if(!currentProfile)return;
+  if(realtimeChannel){
+    supabase.removeChannel(realtimeChannel);
+    realtimeChannel=null;
+  }
+  const org=currentProfile.organization_id;
+  const tables=["network_assets","network_cables","network_cores","network_core_connections","network_splitters","network_splitter_outputs","network_splitter_connections","network_links","incidents","work_orders","profiles"];
+  const channel=supabase.channel("fiber-analyzer-org-"+org);
+  tables.forEach(table=>{
+    channel.on("postgres_changes",{event:"*",schema:"public",table,filter:"organization_id=eq."+org},scheduleRealtimeRefresh);
+  });
+  realtimeChannel=channel.subscribe((status,error)=>{
+    if(status==="SUBSCRIBED"){
+      setRealtimeStatus("LIVE","Supabase Realtime aktif.");
+      refreshRealtimeData();
+    }else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"){
+      setRealtimeStatus("ERROR",error?.message||"Realtime channel error.");
+    }else if(status==="CLOSED"){
+      setRealtimeStatus("OFFLINE","Realtime channel ditutup.");
+    }else{
+      setRealtimeStatus("CONNECTING","Menghubungkan Supabase Realtime...");
+    }
+  });
+  window.addEventListener("online",()=>{
+    setRealtimeStatus("CONNECTING","Internet kembali, menghubungkan Realtime...");
+    setupRealtime();
+  });
+  window.addEventListener("offline",()=>setRealtimeStatus("OFFLINE","Browser offline."));
+}
+
 function renderCondition(){
   const cores=db.cores||[],total=cores.length,counts={IN_USE:0,AVAILABLE:0,RESERVED:0,DAMAGED:0};
   cores.forEach(c=>{if(counts[c.status]!==undefined)counts[c.status]++;else counts.AVAILABLE++});
@@ -697,6 +793,8 @@ function renderOpticalAnalyzer(){
 (async()=>{
   if(await initAuth()){
     render();
+    ensureRealtimeUI();
+    setupRealtime();
     const hash=location.hash;
     if(hash){
       requestAnimationFrame(()=>setTimeout(()=>document.querySelector(hash)?.scrollIntoView({behavior:"smooth",block:"start"}),50));
