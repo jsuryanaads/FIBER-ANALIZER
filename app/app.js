@@ -134,7 +134,10 @@ async function initAuth(){
   $("userRole").textContent=currentProfile.role;
   $("userAvatar").textContent=(currentProfile.name||currentUser.email).slice(0,2).toUpperCase();
   $("logoutBtn").onclick=async()=>{const role=currentProfile?.role;await supabase.auth.signOut();location.href=route(role==="PENGELOLA"?"/pengelola/login":role==="TEKNISI"?"/teknisi/login":"/admin/login")};
-  document.querySelectorAll(".admin-only,.admin-nav").forEach(el=>el.style.display=currentProfile.role==="ADMINISTRATOR"?"":"none");
+  document.querySelectorAll(".admin-only,.admin-nav").forEach(el=>{
+    const isAdmin=currentProfile.role==="ADMINISTRATOR";
+    el.style.display=isAdmin?(el.classList.contains("admin-nav")?"block":"block"):"none";
+  });
   return true;
 }
 function requirePermission(permission){if(roleCan(permission))return true;alert("Akses ditolak. Role "+(currentProfile?.role||"UNKNOWN")+" tidak memiliki izin ini.");return false}
