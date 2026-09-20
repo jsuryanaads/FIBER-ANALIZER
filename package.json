@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --check app/app.js && node scripts/build-pages.mjs --check && node tests/graph-engine.test.js && node tests/topology-engine.test.js && node tests/ui-integrity.test.js && node tests/project-integrity.test.js"
+    "test": "node --check app/app.js && node scripts/build-pages.mjs --check && node tests/graph-engine.test.js && node tests/topology-engine.test.js && node tests/ui-integrity.test.js && node tests/project-integrity.test.js",
+    "version:check": "node scripts/version-check.mjs"
   },
   "engines": {
     "node": ">=22"
