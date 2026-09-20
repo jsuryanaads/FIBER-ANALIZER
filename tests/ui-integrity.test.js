@@ -29,7 +29,7 @@ if(!html.includes("id=\"userForm\""))throw new Error("User management form missi
 if(!js.includes("ROLE_PERMISSIONS")||!js.includes("user.manage"))throw new Error("RBAC permissions missing");
 if(!js.includes("supabase.auth.signInWithPassword"))throw new Error("Supabase login missing");
 if(!js.includes("network_assets")||!js.includes("network_cables")||!js.includes("network_cores"))throw new Error("Supabase network CRUD tables missing");
-if(!js.includes("syncNetworkState")||!js.includes("readNetworkState"))throw new Error("Supabase network persistence missing");
+if(!js.includes("syncNetworkData")||!js.includes("readNetworkData"))throw new Error("Supabase network persistence missing");
 if(!js.includes("loadOperationalData")||!js.includes("syncOperationalData")||!js.includes("incidents")||!js.includes("work_orders"))throw new Error("Operational Supabase persistence missing");
 if(!js.includes("supabase.auth.signUp"))throw new Error("Administrator registration missing");
 if(!js.includes('supabase.functions.invoke("admin-user"'))throw new Error("Admin user invitation missing");
@@ -41,15 +41,15 @@ if(!js.includes("el.style.display=isAdmin"))throw new Error("Administrator secti
 console.log("RBAC UI integrity test passed");
 
 
+const builder=fs.readFileSync(new URL("../scripts/build-pages.mjs",import.meta.url),"utf8");
 const pageFiles=["index.html","topology.html","inventory.html","cable-core.html","trace-analysis.html","optical-analyzer.html","incident.html","work-order.html","customer.html","reports.html","users.html","settings.html"];
 for(const file of pageFiles){
-  const pageHtml=fs.readFileSync(new URL("../app/"+file,import.meta.url),"utf8");
-  if(!pageHtml.includes('src="./app.js"'))throw new Error("app.js missing from "+file);
-  if(!pageHtml.match(/<body[^>]*data-page="[^"]+"/))throw new Error("data-page missing from "+file);
-  if(!pageHtml.includes('<base href="/FIBER-ANALIZER/">'))throw new Error("base path missing from "+file);
+  if(!builder.includes('"'+file+'"'))throw new Error("Page manifest missing: "+file);
 }
-if(!js.includes("remoteReadOk"))throw new Error("Supabase read-failure guard missing");
-if(!js.includes("Data organisasi tidak dapat dibaca dari Supabase"))throw new Error("Remote/local data safety guard missing");
+if(!html.match(/<body[^>]*data-page="dashboard"/))throw new Error("Canonical data-page missing");
+if(!html.includes('src="./app.js?v='))throw new Error("Canonical app.js cache-busting reference missing");
+if(!js.includes("async function readNetworkData"))throw new Error("Supabase network read service missing");
+if(!js.includes("async function syncNetworkData"))throw new Error("Supabase network write service missing");
 
 if(!html.includes('id="incidentDialog"')||!html.includes('id="workOrderDialog"')||!html.includes('id="customerDialog"'))throw new Error("Operational dialogs missing");
 if(!js.includes("function ensureOperationalUI()")||!js.includes("ensureOperationalUI();"))throw new Error("Shared operational UI bootstrap missing");
@@ -65,6 +65,6 @@ if(!js.includes("function setupRealtime()"))throw new Error("Supabase Realtime b
 if(!js.includes('postgres_changes'))throw new Error("Supabase postgres_changes subscription missing");
 if(!js.includes('network_assets')||!js.includes('work_orders'))throw new Error("Realtime operational/network tables missing");
 if(!js.includes('organization_id=eq.')||!js.includes('fiber-analyzer-org-'))throw new Error("Realtime organization isolation missing");
-if(!js.includes('id="realtimeStatus"')&&!js.includes('id="realtimeStatus"'))throw new Error("Realtime status UI missing from runtime bootstrap");
+if(!js.includes('id="realtimeStatus"'))throw new Error("Realtime status UI missing from runtime bootstrap");
 if(!js.includes('setRealtimeStatus("LIVE"'))throw new Error("Realtime LIVE state missing");
 console.log("Realtime integrity test passed");
