@@ -289,7 +289,52 @@ function wireNavigation(){
 
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 function options(list,value,empty="— Tidak ada —"){return '<option value="">'+empty+'</option>'+list.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===value?"selected":"")+'>'+esc(x.code||x.name||x.id)+'</option>').join("")}
-function render(){wireNavigation();renderStats();renderTopologyMap();renderCondition();renderAssets();renderCustomers();renderCores();renderCables();renderOltPorts();renderConnections();renderSplitters();renderSplitterConnections();renderOpticalAnalyzer();renderUsers()}
+function applyPageVisibility(){
+  const page=document.body.dataset.page||"dashboard";
+  document.querySelectorAll(".page-section").forEach(el=>{el.hidden=true});
+  const cls={
+    dashboard:"page-dashboard-section",
+    topology:"page-topology-section",
+    inventory:"page-inventory-section",
+    "cable-core":"page-cable-section",
+    "trace-analysis":"page-trace-section",
+    "optical-analyzer":"page-optical-section",
+    incident:"page-incident-section",
+    "work-order":"page-workorder-section",
+    customer:"page-customer-section",
+    reports:"page-reports-section",
+    users:"page-users-section",
+    settings:"page-settings-section"
+  }[page]||"page-dashboard-section";
+  document.querySelectorAll("."+cls).forEach(el=>{el.hidden=false});
+  document.querySelectorAll(".sidebar nav a").forEach(a=>{
+    const href=a.getAttribute("href")||"";
+    a.classList.toggle("active",href.includes("./"+page+".html") || (page==="dashboard"&&href.includes("./dashboard.html")));
+  });
+}
+function renderWorkOrders(){
+  const el=$("workOrderList");if(!el)return;
+  const rows=db.workOrders||[];
+  el.innerHTML=rows.map(x=>'<div class="cable-card"><div><b>'+esc(x.code||x.id)+'</b><span class="badge">'+esc(x.status||"OPEN")+'</span></div><div class="muted">'+esc(x.title||x.description||"Work Order")+' · '+esc(x.priority||"NORMAL")+'</div></div>').join("")||'<p class="muted">Belum ada Work Order.</p>';
+}
+function renderCustomerPage(){
+  const el=$("customerList");if(!el)return;
+  const rows=db.assets.filter(x=>x.type==="CUSTOMER");
+  el.innerHTML=rows.map(x=>'<div class="cable-card"><div><b>'+esc(x.code)+'</b><span class="badge">'+esc(x.status||"ACTIVE")+'</span></div><div class="muted">'+esc(x.name)+' · Customer</div></div>').join("")||'<p class="muted">Belum ada customer.</p>';
+}
+function renderReports(){
+  const el=$("reportSummary");if(!el)return;
+  const counts=Object.fromEntries(topology.map(t=>[t,db.assets.filter(a=>a.type===t).length]));
+  const items=[["OLT",counts.OLT||0],["OTB",counts.OTB||0],["JB",counts.JB||0],["BOX ODC-ODP",counts.ODC_ODP||0],["BOX ODC",counts.ODC||0],["BOX ODP",counts.ODP||0],["Customer",counts.CUSTOMER||0],["Core",(db.cores||[]).length]];
+  el.innerHTML=items.map(([label,value])=>'<div class="stat"><b>'+value+'</b><span>'+esc(label)+'</span></div>').join("");
+}
+function renderSettings(){
+  const el=$("settingsContent");if(!el||!currentProfile)return;
+  el.innerHTML='<div class="cable-card"><b>Akun</b><div class="muted">'+esc(currentProfile.name||currentUser?.email||"-")+' · '+esc(currentProfile.role)+'</div></div><div class="cable-card"><b>Organization</b><div class="muted">'+esc(currentProfile.organization_id)+'</div></div><div class="cable-card"><b>Session</b><div class="muted">Supabase Auth · Session tersimpan otomatis</div></div>';
+}
+function render(){
+  wireNavigation();renderStats();renderTopologyMap();renderCondition();renderAssets();renderCustomers();renderCores();renderCables();renderOltPorts();renderConnections();renderSplitters();renderSplitterConnections();renderOpticalAnalyzer();renderUsers();renderWorkOrders();renderCustomerPage();renderReports();renderSettings();applyPageVisibility();
+}
 function nodeOptions(value=""){return '<option value="">— Pilih node —</option>'+db.assets.map(a=>'<option value="'+esc(a.id)+'" '+(a.id===value?"selected":"")+'>'+esc(a.code)+' — '+esc(a.name)+'</option>').join("")}
 function portOptions(nodeId,value=""){const a=db.assets.find(x=>x.id===nodeId);const count=Math.max(1,Number(a?.port_count)||(a?.type==="OLT"?16:1));return Array.from({length:count},(_,i)=>{const n=i+1;return `<option value="${n}" ${String(n)===String(value)?"selected":""}>Port ${n}</option>`}).join("")} function syncCablePorts(){$("cableFromPort").innerHTML=portOptions($("cableFrom").value,$("cableFromPort").value);$("cableToPort").innerHTML=portOptions($("cableTo").value,$("cableToPort").value)} function openCable(c){c=c||{};$("cableId").value=c.id||"";$("cableCode").value=c.code||"";$("cableFrom").innerHTML=nodeOptions(c.from);$("cableTo").innerHTML=nodeOptions(c.to);$("cableFiberCount").value=c.fiber_count||12;$("cableLength").value=c.length_m||0;$("cableStatus").value=c.status||"ACTIVE";syncCablePorts();$("cableDialog").showModal()}
 function cablesAtNode(nodeId){return (db.cables||[]).filter(c=>c.from===nodeId||c.to===nodeId)}
