@@ -10,7 +10,6 @@ const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
   }
 });
 import {shortestTrace,coreTrace,validateGraph} from "./graph-engine.js";
-const KEY="fiber-analyzer-flex-v3";
 const APP_BASE="/FIBER-ANALIZER";
 const route=path=>APP_BASE+path;
 const $=id=>document.getElementById(id);
@@ -193,7 +192,7 @@ document.addEventListener("submit",e=>{if(e.target.matches("#assetForm,#cableFor
 const topology=["OLT","OTB","JB","ODC_ODP","ODC","ODP","CUSTOMER"];
 const typeLabel=t=>({OLT:"OLT",OTB:"OTB",JB:"JB",ODC_ODP:"BOX ODC-ODP",ODC:"BOX ODC",ODP:"BOX ODP",CUSTOMER:"PELANGGAN"}[t]||t);
 const emptyDb=()=>({assets:[],links:[],logicalLinks:[],splices:[],splitterOutputs:[],splitterConnections:[],cables:[],cores:[],splitters:[],coreConnections:[]});
-let db=JSON.parse(localStorage.getItem(KEY)||"null")||emptyDb();
+let db=emptyDb();
 db.assets=db.assets||[];db.cables=db.cables||[];db.cores=db.cores||[];db.coreConnections=db.coreConnections||[];db.splitterOutputs=db.splitterOutputs||[];
 function migrateLegacyTopology(){
   const legacyPonIds=new Set(db.assets.filter(a=>a.type==="OLT_PON"||a.type==="PON").map(a=>a.id));
@@ -282,24 +281,18 @@ async function syncNetworkState(){
   await supabase.from("network_state").upsert({organization_id:org,state:db,updated_by:currentUser.id,updated_at:new Date().toISOString()});
 }
 function save(){
-  const orgKey=currentProfile?"fiber-analyzer-org-"+currentProfile.organization_id:KEY;
-  localStorage.setItem(orgKey,JSON.stringify(db));
+  if(!currentProfile)return;
   clearTimeout(syncTimer);
-  syncTimer=setTimeout(()=>Promise.all([syncNetworkState(),syncOperationalData()]).catch(err=>console.error("Supabase sync failed:",err)),150);
+  syncTimer=setTimeout(()=>Promise.all([syncNetworkState(),syncOperationalData(),syncCustomers()]).catch(err=>{
+    console.error("Supabase save failed:",err);
+    setRealtimeStatus("ERROR",err.message||"Supabase save failed");
+  }),150);
 }
 async function loadOrganizationState(){
-  const orgKey="fiber-analyzer-org-"+currentProfile.organization_id;
-  let remote=null,remoteReadOk=false;
-  try{remote=await readNetworkState();remoteReadOk=true}catch(err){console.error("Supabase read failed:",err)}
-  const local=JSON.parse(localStorage.getItem(orgKey)||"null");
-  if(remoteReadOk&&(remote?.assets?.length||remote?.cables?.length||remote?.cores?.length)) db=remote;
-  else if(remoteReadOk) db=local||emptyDb();
-  else if(local) db=local;
-  else throw new Error("Data organisasi tidak dapat dibaca dari Supabase dan tidak ada salinan lokal yang tersedia.");
+  const remote=await readNetworkState();
+  db=remote||emptyDb();
   db.assets=db.assets||[];db.cables=db.cables||[];db.cores=db.cores||[];db.coreConnections=db.coreConnections||[];db.splitterOutputs=db.splitterOutputs||[];db.links=db.links||[];db.logicalLinks=db.logicalLinks||[];db.splices=db.splices||[];db.splitters=db.splitters||[];db.splitterConnections=db.splitterConnections||[];
   migrateLegacyTopology();normalizeOltPorts();normalizeDb();
-  localStorage.setItem(orgKey,JSON.stringify(db));
-  if(remoteReadOk&&(!remote?.assets?.length&&!remote?.cables?.length&&!remote?.cores?.length)&&local&&roleCan("network.write")) await syncNetworkState();
 }
 function wireNavigation(){
   document.querySelectorAll("[data-scroll]").forEach(b=>b.onclick=()=>document.querySelector(b.dataset.scroll)?.scrollIntoView({behavior:"smooth",block:"start"}));
@@ -588,7 +581,6 @@ async function refreshRealtimeData(){
     db.splitters=db.splitters||[];db.splitterOutputs=db.splitterOutputs||[];db.splitterConnections=db.splitterConnections||[];
     db.links=db.links||[];db.logicalLinks=db.logicalLinks||[];db.splices=db.splices||[];
     normalizeOltPorts();normalizeDb();
-    localStorage.setItem("fiber-analyzer-org-"+currentProfile.organization_id,JSON.stringify(db));
     render();
     if(currentProfile.role==="ADMINISTRATOR")renderUsers();
     setRealtimeStatus("LIVE","Data real-time tersinkron.");
