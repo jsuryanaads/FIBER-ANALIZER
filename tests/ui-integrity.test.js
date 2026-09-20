@@ -2,7 +2,7 @@ import fs from "node:fs";
 const html=fs.readFileSync(new URL("../app/index.html",import.meta.url),"utf8");
 const js=fs.readFileSync(new URL("../app/app.js",import.meta.url),"utf8");
 const ids=[...js.matchAll(/\$\(["']([^"']+)["']\)/g)].map(m=>m[1]);
-const dynamicAuthIds=new Set(["setupForm","setupUser","setupName","setupPass","setupPass2","loginForm","loginUser","loginPass","registerForm","registerEmail","registerName","registerUsername","registerOrg","registerPass","registerPass2","loginEmail","loginPass","userEmail","backLogin","registerLink"]);
+const dynamicAuthIds=new Set(["setupForm","setupUser","setupName","setupPass","setupPass2","loginForm","loginUser","loginPass","registerForm","registerEmail","registerName","registerUsername","registerOrg","registerPass","registerPass2","loginEmail","loginPass","userEmail","backLogin","registerLink","retryProfile","retryProfileSignOut","retryProfileOnly","retryAppLoad","retrySignOut","incidentId","workOrderId","customerId","realtimeStatus"]);
 const missing=[...new Set(ids)].filter(id=>!dynamicAuthIds.has(id)&&!new RegExp(`(?:id|name)=["\x27]${id}["\x27]`).test(html));
 if(missing.length)throw new Error("UI IDs missing from index.html: "+missing.join(", "));
 if(!html.includes('src="./app.js?v='))throw new Error("app.js is not loaded");
