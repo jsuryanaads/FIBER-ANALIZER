@@ -694,7 +694,7 @@ $("connectionForm").onsubmit=e=>{e.preventDefault();const id=$("connectionId").v
 $("connectionList").onclick=e=>{const edit=e.target.dataset.connEdit,del=e.target.dataset.connDel;if(edit)openConnection(db.coreConnections.find(x=>x.id===edit));if(del&&confirm("Hapus mapping core ini?")){db.coreConnections=db.coreConnections.filter(x=>x.id!==del);save();render()}};
 $("addConnection").onclick=()=>openConnection();
 $("cableList").onclick=e=>{const edit=e.target.dataset.cableEdit,del=e.target.dataset.cableDel;if(edit)openCable(db.cables.find(c=>c.id===edit));if(del&&confirm("Hapus kabel dan seluruh core kabel ini?")){db.cables=db.cables.filter(c=>c.id!==del);db.cores=db.cores.filter(c=>c.cable_id!==del);db.coreConnections=(db.coreConnections||[]).filter(x=>x.inputCableId!==del&&x.outputCableId!==del);save();render()}};
-$("resetDemo").onclick=()=>{if(confirm("Hapus seluruh data jaringan di browser? Semua data akan dihapus dan tidak dapat dipulihkan.")){db=emptyDb();save();render()}};
+$("resetDemo").onclick=()=>{if(confirm("Hapus seluruh data jaringan organisasi ini dari Supabase? Semua data jaringan akan dihapus dan tidak dapat dipulihkan.")){db=emptyDb();save();render()}};
 function splitterLoss(ratio){const n=Number(String(ratio).split(":")[1])||1;return 10*Math.log10(n)}
 function splitterAllowed(type){return type==="ODC_ODP"||type==="ODC"||type==="ODP"}
 function renderSplitterConnections(){
