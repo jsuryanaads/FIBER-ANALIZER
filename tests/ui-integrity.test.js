@@ -60,3 +60,11 @@ if(!js.includes('requirePermission("customer.write")'))throw new Error("Customer
 if(!js.includes('data-incident-edit')||!js.includes('data-incident-del')||!js.includes('data-work-order-edit')||!js.includes('data-work-order-del')||!js.includes('data-customer-edit')||!js.includes('data-customer-del'))throw new Error("Operational edit/delete UI missing");
 if(!js.includes('.upsert(row,{onConflict:"id"})'))throw new Error("Operational upsert missing");
 if(!js.includes('.from("incidents").delete()')||!js.includes('.from("work_orders").delete()'))throw new Error("Operational delete persistence missing");
+
+if(!js.includes("function setupRealtime()"))throw new Error("Supabase Realtime bootstrap missing");
+if(!js.includes('postgres_changes'))throw new Error("Supabase postgres_changes subscription missing");
+if(!js.includes('network_assets')||!js.includes('work_orders'))throw new Error("Realtime operational/network tables missing");
+if(!js.includes('organization_id=eq.')||!js.includes('fiber-analyzer-org-'))throw new Error("Realtime organization isolation missing");
+if(!js.includes('id="realtimeStatus"')&&!js.includes('id="realtimeStatus"'))throw new Error("Realtime status UI missing from runtime bootstrap");
+if(!js.includes('setRealtimeStatus("LIVE"'))throw new Error("Realtime LIVE state missing");
+console.log("Realtime integrity test passed");
