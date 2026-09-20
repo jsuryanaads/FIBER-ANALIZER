@@ -42,12 +42,15 @@ The application view-model `db` is a UI orchestration model. Persistent network 
 - `network_splitter_outputs`
 - `network_splitter_connections`
 - `network_links`
+- `customers` for customer/service master data
 
-`network_state` may be retained as a compatibility snapshot, but it is not the authoritative CRUD representation.
+`network_state` may be retained as a compatibility snapshot, but it is not the authoritative CRUD representation. Browser `localStorage` is not used for network persistence.
 
 ### Operational data
 - `incidents`
 - `work_orders`
+
+Customer service fields are persisted in `customers`; the `CUSTOMER` network asset remains the topology endpoint and shares the same UUID.
 
 Operational status must be rendered from these records. No hard-coded incident cards or fake counters are allowed.
 
