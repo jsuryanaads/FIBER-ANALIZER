@@ -17,6 +17,8 @@ const pages={
   "settings.html":"settings"
 };
 
+if(process.argv.includes("--check")){if(!source.includes("<body"))throw new Error("Canonical page template is invalid");console.log("page template check passed");process.exit(0);}
+
 const out=path.resolve("_site");
 fs.mkdirSync(out,{recursive:true});
 for(const [file,page] of Object.entries(pages)){
