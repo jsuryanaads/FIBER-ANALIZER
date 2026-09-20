@@ -31,6 +31,9 @@ jobs:
           node-version: 22
       - run: npm test
 
+      - name: Validate application version
+        run: npm run version:check
+
       - name: Prepare Supabase configuration
         env:
           SUPABASE_URL_SECRET: ${{ secrets.SUPABASE_URL }}
