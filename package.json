@@ -6,8 +6,6 @@
     "test": "node --check app/app.js && node scripts/build-pages.mjs --check",
     "version:check": "node scripts/version-check.mjs"
   },
-  "engines": {
-    "node": ">=22"
-  },
-  "version": "2.0.0"
+  "engines": {"node": ">=22"},
+  "version": "2.1.0"
 }
