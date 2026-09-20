@@ -523,7 +523,11 @@ async function loadCustomers(){
   const {data,error}=await supabase.from("customers").select("*").eq("organization_id",currentProfile.organization_id).order("created_at",{ascending:true});
   if(error)throw error;
   const customerRows=data||[];
-  const byId=new Map(customerRows.map(x=>[x.id,x]));
+  const legacyCustomers=(db.assets||[]).filter(x=>x.type==="CUSTOMER");
+  if(!customerRows.length&&legacyCustomers.length&&roleCan("customer.write")){
+    await syncCustomers();
+    return;
+  }
   db.assets=(db.assets||[]).filter(x=>x.type!=="CUSTOMER");
   customerRows.forEach(x=>db.assets.push({
     id:x.id,type:"CUSTOMER",code:x.customer_code,name:x.name,status:x.service_status||"PROSPECT",
