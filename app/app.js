@@ -117,7 +117,7 @@ async function initAuth(){
   $("userName").textContent=currentProfile.name||currentUser.email;
   $("userRole").textContent=currentProfile.role;
   $("userAvatar").textContent=(currentProfile.name||currentUser.email).slice(0,2).toUpperCase();
-  $("logoutBtn").onclick=async()=>{await supabase.auth.signOut();location.href="/FIBER-ANALIZER/admin/login"};
+  $("logoutBtn").onclick=async()=>{const role=currentProfile?.role;await supabase.auth.signOut();location.href=route(role==="PENGELOLA"?"/pengelola/login":role==="TEKNISI"?"/teknisi/login":"/admin/login")};
   document.querySelectorAll(".admin-only,.admin-nav").forEach(el=>el.style.display=currentProfile.role==="ADMINISTRATOR"?"":"none");
   return true;
 }
