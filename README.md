@@ -100,3 +100,19 @@ Supabase service-role credentials must **never** be committed to the repository 
 6. Vendor-specific integrations belong behind adapters and must not become part of the core topology model.
 
 See [Architecture](docs/ARCHITECTURE.md) for the system boundaries and data flow.
+
+
+## Aturan Versi Deployment
+
+Versi menggunakan Semantic Versioning (SemVer): MAJOR.MINOR.PATCH.
+
+- **Perubahan besar / fitur utama → MINOR**: 1.0.0 → 1.1.0
+- **Perubahan kecil / bug fix → PATCH**: 1.1.0 → 1.1.1
+- **Perubahan yang memutus kompatibilitas → MAJOR**: 1.1.1 → 2.0.0
+
+Aturan:
+1. Perubahan besar yang menambah modul, kemampuan utama, atau perubahan UX besar menaikkan MINOR dan mereset PATCH ke 0.
+2. Bug fix, koreksi UI, optimasi, cleanup, dan perbaikan kompatibilitas menaikkan PATCH.
+3. MAJOR hanya untuk perubahan yang memutus kontrak/kompatibilitas dan membutuhkan migrasi khusus.
+4. Setiap deploy dari main wajib memiliki package.json.version yang sudah dinaikkan sesuai jenis perubahan.
+5. Footer mengambil versi dari package.json dan tahun secara otomatis.
