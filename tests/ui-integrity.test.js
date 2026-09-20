@@ -5,7 +5,7 @@ const ids=[...js.matchAll(/\$\(["']([^"']+)["']\)/g)].map(m=>m[1]);
 const dynamicAuthIds=new Set(["setupForm","setupUser","setupName","setupPass","setupPass2","loginForm","loginUser","loginPass","registerForm","registerEmail","registerName","registerUsername","registerOrg","registerPass","registerPass2","loginEmail","loginPass","userEmail","backLogin","registerLink"]);
 const missing=[...new Set(ids)].filter(id=>!dynamicAuthIds.has(id)&&!new RegExp(`(?:id|name)=["\x27]${id}["\x27]`).test(html));
 if(missing.length)throw new Error("UI IDs missing from index.html: "+missing.join(", "));
-if(!html.includes('src="./app.js"'))throw new Error("app.js is not loaded");
+if(!html.includes('src="./app.js?v='))throw new Error("app.js is not loaded");
 if(!html.includes('<base href="/FIBER-ANALIZER/">'))throw new Error("GitHub Pages base path missing");
 if(!js.includes('const APP_BASE="/FIBER-ANALIZER"'))throw new Error("GitHub Pages route base missing");
 if(!html.includes('id="connectionList"'))throw new Error("Core connection UI missing");
