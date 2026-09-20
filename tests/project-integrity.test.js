@@ -21,6 +21,7 @@ if(!index.includes('src="./app.js?v='))throw new Error("app.js cache-busting ver
 if(!index.includes('data-page="dashboard"'))throw new Error("Canonical dashboard page marker missing");
 if(!app.includes('const APP_BASE="/FIBER-ANALIZER"'))throw new Error("Application base path missing");
 if(app.includes("localStorage"))throw new Error("Network data must not use localStorage as a persistence source");
+if(app.includes("from(\"network_state\").upsert"))throw new Error("Legacy network_state snapshot must not be written");
 if(!app.includes("from(\"customers\")"))throw new Error("Normalized customer table is not wired");
 if(!workflow.includes("branches:\n      - main"))throw new Error("Pages deployment must be main-only");
 if(workflow.includes("feature/fiber-network-foundation"))throw new Error("Feature branch must not deploy to production Pages");
