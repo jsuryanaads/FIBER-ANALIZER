@@ -105,19 +105,37 @@ async function initAuth(){
   ]);
 
   try{
-    await timeout(loadProfile(),8000);
+    let lastError=null;
+    for(let attempt=1;attempt<=3&&!currentProfile;attempt++){
+      try{
+        await timeout(loadProfile(),8000);
+        if(currentProfile)break;
+      }catch(err){
+        lastError=err;
+        await new Promise(resolve=>setTimeout(resolve,500*attempt));
+      }
+    }
     // Give the auth client one refresh cycle when a persisted session exists.
     if(!currentUser){
       const {data:{session}}=await supabase.auth.getSession();
       currentUser=session?.user||null;
     }
+    if(!currentProfile&&lastError)throw lastError;
   }catch(err){
-    showAuth("Koneksi autentikasi gagal: "+err.message);
+    if(currentUser){
+      console.error("Authenticated session restored but profile lookup failed:",err);
+      $("authBody").innerHTML='<h2>Sesi Aktif</h2><p>Sesi Supabase berhasil dipulihkan, tetapi profil organisasi belum dapat dibaca.</p><div id="authError">'+esc(err.message||"PROFILE_LOAD_FAILED")+'</div><button id="retryProfile">Coba Lagi</button><button id="retryProfileSignOut" class="ghost">Keluar</button>';
+      $("retryProfile").onclick=()=>location.reload();
+      $("retryProfileSignOut").onclick=async()=>{await supabase.auth.signOut();location.reload()};
+    }else showAuth("Koneksi autentikasi gagal: "+err.message);
     return false;
   }
 
   if(!currentProfile){
-    showAuth();
+    if(currentUser){
+      $("authBody").innerHTML='<h2>Sesi Aktif</h2><p>Akun terautentikasi, tetapi profil aplikasi belum tersedia. Silakan coba lagi.</p><button id="retryProfileOnly">Coba Lagi</button>';
+      $("retryProfileOnly").onclick=()=>location.reload();
+    }else showAuth();
     return false;
   }
 
