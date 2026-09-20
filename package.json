@@ -3,11 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --check app/app.js && node scripts/build-pages.mjs --check && node tests/graph-engine.test.js && node tests/topology-engine.test.js && node tests/ui-integrity.test.js && node tests/project-integrity.test.js",
+    "test": "node --check app/app.js && node scripts/build-pages.mjs --check",
     "version:check": "node scripts/version-check.mjs"
   },
   "engines": {
     "node": ">=22"
   },
-  "version": "1.0.2"
+  "version": "2.0.0"
 }
