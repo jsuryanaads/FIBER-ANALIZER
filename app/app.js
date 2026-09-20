@@ -384,11 +384,18 @@ function openWorkOrder(x={}){
   $("workOrderTitle").value=x.title||"";$("workOrderDescription").value=x.description||"";$("workOrderPriority").value=x.priority||"MEDIUM";$("workOrderStatus").value=x.status||"OPEN";fillOperationalAssetSelect("workOrderAsset");$("workOrderAsset").value=x.asset_id||"";
   $("workOrderDialog").showModal();
 }
+function fillCustomerOdp(value=""){
+  const el=$("customerOdp");if(!el)return;
+  el.innerHTML='<option value="">— Belum ditentukan —</option>'+db.assets.filter(x=>x.type==="ODP").map(x=>'<option value="'+esc(x.id)+'">'+esc(x.code)+' — '+esc(x.name)+'</option>').join("");
+  el.value=value||"";
+}
 function openCustomer(x={}){
   if(!requirePermission("customer.write"))return;
   $("customerId").value=x.id||"";
   $("customerCode").value=x.code||"CUST-"+String(db.assets.filter(x=>x.type==="CUSTOMER").length+1).padStart(3,"0");
-  $("customerName").value=x.name||"";$("customerAddress").value=x.address||"";$("customerStatus").value=x.status||"ACTIVE";$("customerPackage").value=x.package||"";$("customerNotes").value=x.notes||"";$("customerDialog").showModal();
+  $("customerName").value=x.name||"";$("customerAddress").value=x.address||"";$("customerStatus").value=x.status||"ACTIVE";$("customerPackage").value=x.package||"";$("customerNotes").value=x.notes||"";
+  fillCustomerOdp(x.odp_id||"");$("customerOdpPort").value=x.odp_port||"";
+  $("customerDialog").showModal();
 }
 $("addIncident")?.addEventListener("click",openIncident);
 $("addWorkOrder")?.addEventListener("click",openWorkOrder);
@@ -432,7 +439,7 @@ $("workOrderList")?.addEventListener("click",async e=>{
 $("customerForm")?.addEventListener("submit",async e=>{
   e.preventDefault();if(!requirePermission("customer.write"))return;
   const id=$("customerId").value||crypto.randomUUID();
-  const item={id,type:"CUSTOMER",code:$("customerCode").value.trim(),name:$("customerName").value.trim(),status:$("customerStatus").value,port_count:1,address:$("customerAddress").value.trim(),package:$("customerPackage").value.trim(),notes:$("customerNotes").value.trim()};
+  const item={id,type:"CUSTOMER",code:$("customerCode").value.trim(),name:$("customerName").value.trim(),status:$("customerStatus").value,port_count:1,address:$("customerAddress").value.trim(),package:$("customerPackage").value.trim(),notes:$("customerNotes").value.trim(),odp_id:$("customerOdp").value||null,odp_port:Number($("customerOdpPort").value)||null};
   if(!item.code||!item.name){alert("Kode dan nama customer wajib diisi.");return}
   const i=db.assets.findIndex(x=>x.id===id);if(i>=0)db.assets[i]=item;else db.assets.push(item);
   save();$("customerDialog").close();render();
