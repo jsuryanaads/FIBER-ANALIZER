@@ -125,7 +125,13 @@ async function initAuth(){
     await timeout(loadOrganizationState(),8000);
     await timeout(loadOperationalData(),8000);
   }catch(err){
-    showAuth("Sesi berhasil dibaca, tetapi data organisasi gagal dimuat: "+err.message);
+    // A valid Supabase session must never be converted into a login screen
+    // merely because an application data request failed during reload.
+    // Keep the authenticated state and expose a recoverable application error.
+    console.error("Authenticated session restored, but application data failed:",err);
+    $("authBody").innerHTML='<h2>Sesi Aktif</h2><p>Login berhasil dipulihkan, tetapi data aplikasi belum dapat dimuat.</p><div id="authError">'+esc(err.message||"DATA_LOAD_FAILED")+'</div><button id="retryAppLoad">Coba Lagi</button><button id="retrySignOut" class="ghost">Keluar</button>';
+    $("retryAppLoad").onclick=()=>location.reload();
+    $("retrySignOut").onclick=async()=>{await supabase.auth.signOut();location.reload()};
     return false;
   }
 
