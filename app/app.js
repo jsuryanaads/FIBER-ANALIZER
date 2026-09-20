@@ -28,7 +28,7 @@ async function loadProfile(){
   if(!data && portalRole()==="ADMINISTRATOR"){
     const {data:boot,error:bootError}=await supabase.functions.invoke("bootstrap-admin");
     if(bootError) throw bootError;
-    currentProfile=boot;
+    currentProfile=boot?.profile||boot;
   }else currentProfile=data||null;
   return currentProfile;
 }
@@ -63,7 +63,7 @@ function showAuth(error="",register=false){
       const profile=await loadProfile();
       if(!profile||!profile.active)throw new Error("Akun belum diaktifkan atau profil organisasi belum tersedia.");
       if(profile.role!==role){await supabase.auth.signOut();return showAuth("Akun ini terdaftar sebagai "+portalLabel(profile.role)+". Gunakan portal yang sesuai.");}
-      location.href="/";
+      location.href=route("/");
     }catch(err){await supabase.auth.signOut();showAuth(err.message)}
   };
 }
