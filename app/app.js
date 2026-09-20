@@ -95,11 +95,11 @@ function showAuth(error="",register=false){
 setFooterMeta();
 
 async function initAuth(){
-  // Render the portal/login UI before any network request. This prevents the
-  // GitHub Pages shell from remaining on "Memuat sistem autentikasi..." when
-  // Supabase is slow, blocked, or temporarily unavailable.
-  $("authScreen").style.display="grid";
-  showAuth();
+  // Keep the auth overlay hidden while restoring an existing Supabase session.
+  // Each generated page is a fresh document, so showing the login shell before
+  // getSession/loadProfile completes causes a visible "Secure Access" flash.
+  const revealAuth=()=>{const el=$("authScreen");if(el)el.style.display="grid";};
+  const hideAuth=()=>{const el=$("authScreen");if(el)el.style.display="none";};
 
   const timeout=(promise,ms)=>Promise.race([
     promise,
@@ -129,7 +129,7 @@ async function initAuth(){
       $("authBody").innerHTML='<h2>Sesi Aktif</h2><p>Sesi Supabase berhasil dipulihkan, tetapi profil organisasi belum dapat dibaca.</p><div id="authError">'+esc(err.message||"PROFILE_LOAD_FAILED")+'</div><button id="retryProfile">Coba Lagi</button><button id="retryProfileSignOut" class="ghost">Keluar</button>';
       $("retryProfile").onclick=()=>location.reload();
       $("retryProfileSignOut").onclick=async()=>{await supabase.auth.signOut();location.reload()};
-    }else showAuth("Koneksi autentikasi gagal: "+err.message);
+    }else{revealAuth();showAuth("Koneksi autentikasi gagal: "+err.message);}
     return false;
   }
 
@@ -137,7 +137,7 @@ async function initAuth(){
     if(currentUser){
       $("authBody").innerHTML='<h2>Sesi Aktif</h2><p>Akun terautentikasi, tetapi profil aplikasi belum tersedia. Silakan coba lagi.</p><button id="retryProfileOnly">Coba Lagi</button>';
       $("retryProfileOnly").onclick=()=>location.reload();
-    }else showAuth();
+    }else{revealAuth();showAuth();}
     return false;
   }
 
@@ -150,6 +150,7 @@ async function initAuth(){
     // merely because an application data request failed during reload.
     // Keep the authenticated state and expose a recoverable application error.
     console.error("Authenticated session restored, but application data failed:",err);
+    revealAuth();
     $("authBody").innerHTML='<h2>Sesi Aktif</h2><p>Login berhasil dipulihkan, tetapi data aplikasi belum dapat dimuat.</p><div id="authError">'+esc(err.message||"DATA_LOAD_FAILED")+'</div><button id="retryAppLoad">Coba Lagi</button><button id="retrySignOut" class="ghost">Keluar</button>';
     $("retryAppLoad").onclick=()=>location.reload();
     $("retrySignOut").onclick=async()=>{await supabase.auth.signOut();location.reload()};
