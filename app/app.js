@@ -258,7 +258,7 @@ async function readNetworkState(){
   const logicalLinks=results.network_links.filter(x=>x.kind!=="SERVICE").map(x=>({id:x.id,from:x.from_asset_id,to:x.to_asset_id,kind:x.kind,...(x.extra||{})}));
   return {assets,cables,cores,coreConnections,splitters,splitterOutputs,splitterConnections,links,logicalLinks,splices:[],};
 }
-async function syncNetworkState(){
+async function syncNetworkData(){
   if(!currentProfile||!roleCan("network.write")) return;
   const org=currentProfile.organization_id;
   const rows={
@@ -283,7 +283,7 @@ async function syncNetworkState(){
 function save(){
   if(!currentProfile)return;
   clearTimeout(syncTimer);
-  syncTimer=setTimeout(()=>Promise.all([syncNetworkState(),syncOperationalData(),syncCustomers()]).catch(err=>{
+  syncTimer=setTimeout(()=>Promise.all([syncNetworkData(),syncOperationalData(),syncCustomers()]).catch(err=>{
     console.error("Supabase save failed:",err);
     setRealtimeStatus("ERROR",err.message||"Supabase save failed");
   }),150);
