@@ -327,6 +327,9 @@ function ensureOperationalUI(){
   if(!$("customerDialog")){
     document.body.insertAdjacentHTML("beforeend",`<dialog id="customerDialog"><form method="dialog" id="customerForm"><h2>Tambah Customer</h2><label>Kode Customer<input id="customerCode" required placeholder="CUST-001"></label><label>Nama<input id="customerName" required></label><label>Alamat<textarea id="customerAddress"></textarea></label><div class="form-grid"><label>Status<select id="customerStatus"><option selected>ACTIVE</option><option>SUSPENDED</option><option>DISCONNECTED</option><option>PROSPECT</option></select></label><label>Paket<input id="customerPackage" placeholder="Internet 20 Mbps"></label></div><label>Keterangan<textarea id="customerNotes"></textarea></label><div class="actions"><button value="cancel" class="ghost">Batal</button><button value="default">Simpan</button></div></form></dialog>`);
   }
+  if($("incidentForm")&&!$("incidentId"))$("incidentForm").insertAdjacentHTML("afterbegin",'<input type="hidden" id="incidentId">');
+  if($("workOrderForm")&&!$("workOrderId"))$("workOrderForm").insertAdjacentHTML("afterbegin",'<input type="hidden" id="workOrderId">');
+  if($("customerForm")&&!$("customerId"))$("customerForm").insertAdjacentHTML("afterbegin",'<input type="hidden" id="customerId">');
   const page=document.body.dataset.page;
   if(page==="incident"&&!$("addIncident")){
     const section=document.querySelector(".page-incident-section");
@@ -339,60 +342,96 @@ ensureOperationalUI();
 function renderIncidents(){
   const el=$("incidentList");if(!el)return;
   const rows=db.incidents||[];
-  el.innerHTML=rows.map(x=>'<div><b>'+esc(x.code||x.id)+'</b><span>'+esc(x.title||"Gangguan")+'</span><em class="'+(x.priority==="CRITICAL"||x.priority==="HIGH"?"danger-text":x.status==="CLOSED"?"success-text":"warn-text")+'">'+esc(x.status||"OPEN")+'</em><small class="muted">'+esc(x.description||"")+'</small></div>').join("")||'<div><b>Tidak ada gangguan</b><span class="muted">Belum ada incident aktif.</span></div>';
+  el.innerHTML=rows.map(x=>'<div><b>'+esc(x.code||x.id)+'</b><span>'+esc(x.title||"Gangguan")+'</span><em class="'+(x.priority==="CRITICAL"||x.priority==="HIGH"?"danger-text":x.status==="CLOSED"?"success-text":"warn-text")+'">'+esc(x.status||"OPEN")+'</em><small class="muted">'+esc(x.description||"")+'</small><div class="cable-actions">'+(roleCan("incident.write")?'<button data-incident-edit="'+esc(x.id)+'">Edit</button><button class="danger" data-incident-del="'+esc(x.id)+'">Hapus</button>':"")+'</div></div>').join("")||'<div><b>Tidak ada gangguan</b><span class="muted">Belum ada incident aktif.</span></div>';
 }
 function fillOperationalAssetSelect(id){
   const el=$(id);if(!el)return;
   el.innerHTML='<option value="">— Tidak dipilih —</option>'+db.assets.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.code)+' — '+esc(x.name)+'</option>').join("");
 }
-function openIncident(){
+function openIncident(x={}){
   if(!requirePermission("incident.write"))return;
-  $("incidentCode").value="INC-"+String((db.incidents||[]).length+1).padStart(3,"0");
-  $("incidentTitle").value="";$("incidentDescription").value="";$("incidentPriority").value="MEDIUM";$("incidentStatus").value="OPEN";fillOperationalAssetSelect("incidentAsset");$("incidentDialog").showModal();
+  $("incidentId").value=x.id||"";
+  $("incidentCode").value=x.code||"INC-"+String((db.incidents||[]).length+1).padStart(3,"0");
+  $("incidentTitle").value=x.title||"";$("incidentDescription").value=x.description||"";$("incidentPriority").value=x.priority||"MEDIUM";$("incidentStatus").value=x.status||"OPEN";fillOperationalAssetSelect("incidentAsset");$("incidentAsset").value=x.asset_id||"";
+  $("incidentDialog").showModal();
 }
-function openWorkOrder(){
+function openWorkOrder(x={}){
   if(!requirePermission("workorder.write"))return;
-  $("workOrderCode").value="WO-"+String((db.workOrders||[]).length+1).padStart(3,"0");
-  $("workOrderTitle").value="";$("workOrderDescription").value="";$("workOrderPriority").value="MEDIUM";$("workOrderStatus").value="OPEN";fillOperationalAssetSelect("workOrderAsset");$("workOrderDialog").showModal();
+  $("workOrderId").value=x.id||"";
+  $("workOrderCode").value=x.code||"WO-"+String((db.workOrders||[]).length+1).padStart(3,"0");
+  $("workOrderTitle").value=x.title||"";$("workOrderDescription").value=x.description||"";$("workOrderPriority").value=x.priority||"MEDIUM";$("workOrderStatus").value=x.status||"OPEN";fillOperationalAssetSelect("workOrderAsset");$("workOrderAsset").value=x.asset_id||"";
+  $("workOrderDialog").showModal();
 }
-function openCustomer(){
+function openCustomer(x={}){
   if(!requirePermission("customer.write"))return;
-  $("customerCode").value="CUST-"+String(db.assets.filter(x=>x.type==="CUSTOMER").length+1).padStart(3,"0");
-  $("customerName").value="";$("customerAddress").value="";$("customerStatus").value="ACTIVE";$("customerPackage").value="";$("customerNotes").value="";$("customerDialog").showModal();
+  $("customerId").value=x.id||"";
+  $("customerCode").value=x.code||"CUST-"+String(db.assets.filter(x=>x.type==="CUSTOMER").length+1).padStart(3,"0");
+  $("customerName").value=x.name||"";$("customerAddress").value=x.address||"";$("customerStatus").value=x.status||"ACTIVE";$("customerPackage").value=x.package||"";$("customerNotes").value=x.notes||"";$("customerDialog").showModal();
 }
 $("addIncident")?.addEventListener("click",openIncident);
 $("addWorkOrder")?.addEventListener("click",openWorkOrder);
 $("addCustomer")?.addEventListener("click",openCustomer);
 $("incidentForm")?.addEventListener("submit",async e=>{
   e.preventDefault();if(!requirePermission("incident.write"))return;
-  const row={id:crypto.randomUUID(),organization_id:currentProfile.organization_id,code:$("incidentCode").value.trim(),title:$("incidentTitle").value.trim(),description:$("incidentDescription").value.trim()||null,priority:$("incidentPriority").value,status:$("incidentStatus").value,asset_id:$("incidentAsset").value||null,reported_by:currentUser.id,opened_at:new Date().toISOString()};
-  const {data,error}=await supabase.from("incidents").insert(row).select("*").single();
+  const id=$("incidentId").value||crypto.randomUUID();
+  const existing=db.incidents.find(x=>x.id===id);
+  const row={id,organization_id:currentProfile.organization_id,code:$("incidentCode").value.trim(),title:$("incidentTitle").value.trim(),description:$("incidentDescription").value.trim()||null,priority:$("incidentPriority").value,status:$("incidentStatus").value,asset_id:$("incidentAsset").value||null,reported_by:existing?.reported_by||currentUser.id,opened_at:existing?.opened_at||new Date().toISOString()};
+  const {data,error}=await supabase.from("incidents").upsert(row,{onConflict:"id"}).select("*").single();
   if(error){alert(error.message);return}
-  db.incidents=[data,...(db.incidents||[])];$("incidentDialog").close();renderIncidents();renderCondition();
+  db.incidents=[data,...(db.incidents||[]).filter(x=>x.id!==id)];$("incidentDialog").close();renderIncidents();renderCondition();
+});
+$("incidentList")?.addEventListener("click",async e=>{
+  const edit=e.target.dataset.incidentEdit,del=e.target.dataset.incidentDel;
+  if(edit){openIncident(db.incidents.find(x=>x.id===edit));return}
+  if(del&&requirePermission("incident.write")&&confirm("Hapus incident ini?")){
+    const {error}=await supabase.from("incidents").delete().eq("id",del).eq("organization_id",currentProfile.organization_id);
+    if(error){alert(error.message);return}
+    db.incidents=db.incidents.filter(x=>x.id!==del);renderIncidents();renderCondition();
+  }
 });
 $("workOrderForm")?.addEventListener("submit",async e=>{
   e.preventDefault();if(!requirePermission("workorder.write"))return;
-  const row={id:crypto.randomUUID(),organization_id:currentProfile.organization_id,code:$("workOrderCode").value.trim(),title:$("workOrderTitle").value.trim(),description:$("workOrderDescription").value.trim()||null,priority:$("workOrderPriority").value,status:$("workOrderStatus").value,asset_id:$("workOrderAsset").value||null,created_by:currentUser.id};
-  const {data,error}=await supabase.from("work_orders").insert(row).select("*").single();
+  const id=$("workOrderId").value||crypto.randomUUID();
+  const existing=db.workOrders.find(x=>x.id===id);
+  const row={id,organization_id:currentProfile.organization_id,code:$("workOrderCode").value.trim(),title:$("workOrderTitle").value.trim(),description:$("workOrderDescription").value.trim()||null,priority:$("workOrderPriority").value,status:$("workOrderStatus").value,asset_id:$("workOrderAsset").value||null,created_by:existing?.created_by||currentUser.id};
+  const {data,error}=await supabase.from("work_orders").upsert(row,{onConflict:"id"}).select("*").single();
   if(error){alert(error.message);return}
-  db.workOrders=[data,...(db.workOrders||[])];$("workOrderDialog").close();renderWorkOrders();renderCondition();
+  db.workOrders=[data,...(db.workOrders||[]).filter(x=>x.id!==id)];$("workOrderDialog").close();renderWorkOrders();renderCondition();
+});
+$("workOrderList")?.addEventListener("click",async e=>{
+  const edit=e.target.dataset.workOrderEdit,del=e.target.dataset.workOrderDel;
+  if(edit){openWorkOrder(db.workOrders.find(x=>x.id===edit));return}
+  if(del&&requirePermission("workorder.write")&&confirm("Hapus Work Order ini?")){
+    const {error}=await supabase.from("work_orders").delete().eq("id",del).eq("organization_id",currentProfile.organization_id);
+    if(error){alert(error.message);return}
+    db.workOrders=db.workOrders.filter(x=>x.id!==del);renderWorkOrders();renderCondition();
+  }
 });
 $("customerForm")?.addEventListener("submit",async e=>{
   e.preventDefault();if(!requirePermission("customer.write"))return;
-  const item={id:crypto.randomUUID(),type:"CUSTOMER",code:$("customerCode").value.trim(),name:$("customerName").value.trim(),status:$("customerStatus").value,port_count:1,address:$("customerAddress").value.trim(),package:$("customerPackage").value.trim(),notes:$("customerNotes").value.trim()};
+  const id=$("customerId").value||crypto.randomUUID();
+  const item={id,type:"CUSTOMER",code:$("customerCode").value.trim(),name:$("customerName").value.trim(),status:$("customerStatus").value,port_count:1,address:$("customerAddress").value.trim(),package:$("customerPackage").value.trim(),notes:$("customerNotes").value.trim()};
   if(!item.code||!item.name){alert("Kode dan nama customer wajib diisi.");return}
-  db.assets.push(item);save();$("customerDialog").close();render();
+  const i=db.assets.findIndex(x=>x.id===id);if(i>=0)db.assets[i]=item;else db.assets.push(item);
+  save();$("customerDialog").close();render();
 });
 function renderWorkOrders(){
   const el=$("workOrderList");if(!el)return;
   const rows=db.workOrders||[];
-  el.innerHTML=rows.map(x=>'<div class="cable-card"><div><b>'+esc(x.code||x.id)+'</b><span class="badge">'+esc(x.status||"OPEN")+'</span></div><div class="muted">'+esc(x.title||x.description||"Work Order")+' · '+esc(x.priority||"NORMAL")+'</div></div>').join("")||'<p class="muted">Belum ada Work Order.</p>';
+  el.innerHTML=rows.map(x=>'<div class="cable-card"><div><b>'+esc(x.code||x.id)+'</b><span class="badge">'+esc(x.status||"OPEN")+'</span></div><div class="muted">'+esc(x.title||x.description||"Work Order")+' · '+esc(x.priority||"NORMAL")+'</div><div class="cable-actions">'+(roleCan("workorder.write")?'<button data-work-order-edit="'+esc(x.id)+'">Edit</button><button class="danger" data-work-order-del="'+esc(x.id)+'">Hapus</button>':"")+'</div></div>').join("")||'<p class="muted">Belum ada Work Order.</p>';
 }
 function renderCustomerPage(){
   const el=$("customerList");if(!el)return;
   const rows=db.assets.filter(x=>x.type==="CUSTOMER");
-  el.innerHTML=rows.map(x=>'<div class="cable-card"><div><b>'+esc(x.code)+'</b><span class="badge">'+esc(x.status||"ACTIVE")+'</span></div><div class="muted">'+esc(x.name)+' · Customer</div></div>').join("")||'<p class="muted">Belum ada customer.</p>';
+  el.innerHTML=rows.map(x=>'<div class="cable-card"><div><b>'+esc(x.code)+'</b><span class="badge">'+esc(x.status||"ACTIVE")+'</span></div><div class="muted">'+esc(x.name)+' · Customer</div><div class="cable-actions">'+(roleCan("customer.write")?'<button data-customer-edit="'+esc(x.id)+'">Edit</button><button class="danger" data-customer-del="'+esc(x.id)+'">Hapus</button>':"")+'</div></div>').join("")||'<p class="muted">Belum ada customer.</p>';
 }
+$("customerList")?.addEventListener("click",e=>{
+  const edit=e.target.dataset.customerEdit,del=e.target.dataset.customerDel;
+  if(edit){openCustomer(db.assets.find(x=>x.id===edit));return}
+  if(del&&requirePermission("customer.write")&&confirm("Hapus customer ini?")){
+    db.assets=db.assets.filter(x=>x.id!==del);db.cables=db.cables.filter(x=>x.from!==del&&x.to!==del);db.cores=db.cores.filter(c=>db.cables.some(k=>k.id===c.cable_id));db.coreConnections=(db.coreConnections||[]).filter(x=>x.nodeId!==del);save();render();
+  }
+});
 function renderReports(){
   const el=$("reportSummary");if(!el)return;
   const counts=Object.fromEntries(topology.map(t=>[t,db.assets.filter(a=>a.type===t).length]));
