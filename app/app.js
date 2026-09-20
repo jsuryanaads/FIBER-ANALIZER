@@ -50,7 +50,20 @@ function showAuth(error="",register=false){
     e.preventDefault();const email=$("registerEmail").value.trim(),name=$("registerName").value.trim(),username=$("registerUsername").value.trim(),org=$("registerOrg").value.trim(),pass=$("registerPass").value;
     if(pass!==$("registerPass2").value)return showAuth("Konfirmasi password tidak sama.",true);
     const {data,error}=await supabase.auth.signUp({email,password:pass,options:{data:{name,username,organization_name:org},emailRedirectTo:location.origin+APP_BASE+"/admin/login"}});
-    if(error)return showAuth(error.message,true);
+    if(error){
+      // Supabase can occasionally persist the Auth user even when the sign-up
+      // request returns a generic database error. Verify that edge case without
+      // storing the password: a successful sign-in or an "email not confirmed"
+      // response proves the account already exists.
+      const {data:recovery,error:recoveryError}=await supabase.auth.signInWithPassword({email,password:pass});
+      if(!recoveryError&&recovery?.session){
+        try{await loadProfile();location.href=route("/");return}catch(err){return showAuth(err.message,true)}
+      }
+      if(recoveryError?.message==="Email not confirmed"){
+        return showAuth("Akun Administrator sudah dibuat tetapi email belum dikonfirmasi. Periksa inbox/spam, konfirmasi email, lalu login di /admin/login.",false);
+      }
+      return showAuth(error.message,true);
+    }
     if(data.session){try{await loadProfile();location.href=route("/")}catch(err){showAuth(err.message,true)}}else showAuth("Pendaftaran berhasil. Periksa email untuk konfirmasi, lalu login di /admin/login.",false);
   };
   if($("backLogin"))$("backLogin").onclick=()=>showAuth("");
