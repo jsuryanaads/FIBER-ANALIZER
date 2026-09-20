@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - feature/fiber-network-foundation
   workflow_dispatch:
 
 permissions:
@@ -46,6 +45,7 @@ jobs:
           if [ -z "$KEY" ]; then KEY="${SUPABASE_KEY_VAR:-}"; fi
           mkdir -p _site
           cp -R app/. _site/
+          node scripts/build-pages.mjs
           if [ -n "$URL" ] && [ -n "$KEY" ]; then
             SUPABASE_URL="$URL" SUPABASE_KEY="$KEY" node -e 'const fs=require("fs"); fs.writeFileSync("_site/supabase-config.js", `export const SUPABASE_URL=${JSON.stringify(process.env.SUPABASE_URL)};\nexport const SUPABASE_PUBLISHABLE_KEY=${JSON.stringify(process.env.SUPABASE_KEY)};\n`);'
           fi
