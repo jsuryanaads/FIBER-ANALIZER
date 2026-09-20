@@ -375,12 +375,21 @@ function applyPageContext(){
   const params=new URLSearchParams(location.search);
   const customerId=params.get("customer")||"";
   if(!customerId)return;
-  if($("customerSelect")&&db.assets.some(x=>x.id===customerId&&x.type==="CUSTOMER"))$("customerSelect").value=customerId;
-  if($("optCustomer")&&db.assets.some(x=>x.id===customerId&&x.type==="CUSTOMER"))$("optCustomer").value=customerId;
-  if(document.body.dataset.page==="trace-analysis"&&$("customerSelect")&&db.assets.some(x=>x.id===customerId&&x.type==="CUSTOMER")){
-    requestAnimationFrame(()=>$("traceBtn")?.click());
+  const customer=db.assets.find(x=>x.id===customerId&&x.type==="CUSTOMER");
+  if(!customer)return;
+  if($("customerSelect"))$("customerSelect").value=customerId;
+  if($("optCustomer"))$("optCustomer").value=customerId;
+  const page=document.body.dataset.page;
+  if(page==="trace-analysis"||page==="optical-analyzer"){
+    const main=document.querySelector("main");
+    if(main&&!document.getElementById("customerContextBanner")){
+      const target=page==="trace-analysis"?"./customer.html":"./trace-analysis.html";
+      const label=page==="trace-analysis"?"Trace jalur layanan":"Analisis optical route";
+      main.insertAdjacentHTML("afterbegin",`<section id="customerContextBanner" class="panel page-section" style="margin-bottom:16px"><div class="panel-head"><div><span class="eyebrow">CUSTOMER CONTEXT</span><h2>${esc(customer.code)} — ${esc(customer.name)}</h2><span class="muted">Konteks customer dipertahankan saat berpindah modul.</span></div><div class="cable-actions"><a class="ghost" href="${target}">${label}</a><a class="ghost" href="./customer.html">Kembali ke Customer</a></div></div></section>`);
+    }
   }
-  if(document.body.dataset.page==="optical-analyzer"&&$("optCustomer")&&db.assets.some(x=>x.id===customerId&&x.type==="CUSTOMER"))renderOpticalAnalyzer();
+  if(page==="trace-analysis"&&$("customerSelect"))requestAnimationFrame(()=>$("traceBtn")?.click());
+  if(page==="optical-analyzer"&&$("optCustomer"))renderOpticalAnalyzer();
 }
 function wireNavigation(){
   document.querySelectorAll("[data-scroll]").forEach(b=>b.onclick=()=>{
@@ -800,7 +809,7 @@ $("connectionForm").onsubmit=e=>{e.preventDefault();const id=$("connectionId").v
 $("connectionList").onclick=e=>{const edit=e.target.dataset.connEdit,del=e.target.dataset.connDel;if(edit)openConnection(db.coreConnections.find(x=>x.id===edit));if(del&&confirm("Hapus mapping core ini?")){db.coreConnections=db.coreConnections.filter(x=>x.id!==del);save();render()}};
 $("addConnection")?.addEventListener("click",e=>{e.preventDefault();if(!requirePermission("network.write"))return;openConnection();});
 $("cableList").onclick=e=>{const edit=e.target.dataset.cableEdit,del=e.target.dataset.cableDel;if(edit)openCable(db.cables.find(c=>c.id===edit));if(del&&confirm("Hapus kabel dan seluruh core kabel ini?")){db.cables=db.cables.filter(c=>c.id!==del);db.cores=db.cores.filter(c=>c.cable_id!==del);db.coreConnections=(db.coreConnections||[]).filter(x=>x.inputCableId!==del&&x.outputCableId!==del);save();render()}};
-$("resetDemo")?.addEventListener("click",()=>{if(confirm("Hapus seluruh data jaringan organisasi ini dari Supabase? Semua data jaringan akan dihapus dan tidak dapat dipulihkan.")){db=emptyDb();save();render()}});
+$("resetDemo")?.addEventListener("click",()=>{if(!requirePermission("system.reset"))return;if(confirm("Hapus seluruh data jaringan organisasi ini dari Supabase? Semua data jaringan akan dihapus dan tidak dapat dipulihkan.")){db=emptyDb();save();render()}});
 function splitterLoss(ratio){const n=Number(String(ratio).split(":")[1])||1;return 10*Math.log10(n)}
 function splitterAllowed(type){return type==="ODC_ODP"||type==="ODC"||type==="ODP"}
 function renderSplitterConnections(){
