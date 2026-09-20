@@ -69,10 +69,37 @@ function showAuth(error="",register=false){
 }
 
 async function initAuth(){
-  try{await loadProfile()}catch(err){showAuth("Koneksi autentikasi gagal: "+err.message);return false}
-  if(!currentProfile){$("authScreen").style.display="grid";showAuth();return false}
-  await loadOrganizationState();
-  await loadOperationalData();
+  // Render the portal/login UI before any network request. This prevents the
+  // GitHub Pages shell from remaining on "Memuat sistem autentikasi..." when
+  // Supabase is slow, blocked, or temporarily unavailable.
+  $("authScreen").style.display="grid";
+  showAuth();
+
+  const timeout=(promise,ms)=>Promise.race([
+    promise,
+    new Promise((_,reject)=>setTimeout(()=>reject(new Error("Timeout koneksi autentikasi ("+Math.round(ms/1000)+" detik).")),ms))
+  ]);
+
+  try{
+    await timeout(loadProfile(),8000);
+  }catch(err){
+    showAuth("Koneksi autentikasi gagal: "+err.message);
+    return false;
+  }
+
+  if(!currentProfile){
+    showAuth();
+    return false;
+  }
+
+  try{
+    await timeout(loadOrganizationState(),8000);
+    await timeout(loadOperationalData(),8000);
+  }catch(err){
+    showAuth("Sesi berhasil dibaca, tetapi data organisasi gagal dimuat: "+err.message);
+    return false;
+  }
+
   $("authScreen").style.display="none";
   $("userName").textContent=currentProfile.name||currentUser.email;
   $("userRole").textContent=currentProfile.role;
