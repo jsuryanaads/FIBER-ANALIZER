@@ -24,7 +24,7 @@ function keepOnlyPageSections(html,page){
     inventory:"inventory",
     "cable-core":"cable",
     "trace-analysis":"trace",
-    ""optical-analyzer":"optical",
+    "optical-analyzer":"optical",
     incident:"incident",
     "work-order":"workorder",
     customer:"customer",
