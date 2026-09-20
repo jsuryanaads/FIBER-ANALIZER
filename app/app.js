@@ -309,7 +309,7 @@ function applyPageVisibility(){
   document.querySelectorAll("."+cls).forEach(el=>{el.hidden=false});
   document.querySelectorAll(".sidebar nav a").forEach(a=>{
     const href=a.getAttribute("href")||"";
-    a.classList.toggle("active",href.includes("./"+page+".html") || (page==="dashboard"&&href.includes("./dashboard.html")));
+    a.classList.toggle("active",href.includes("./"+page+".html") || (page==="dashboard"&&href.includes("./index.html")));
   });
 }
 function renderWorkOrders(){
