@@ -255,7 +255,18 @@ async function loadOrganizationState(){
   localStorage.setItem(orgKey,JSON.stringify(db));
   if((!remote||(!remote.assets.length&&!remote.cables.length&&!remote.cores.length))&&local&&roleCan("network.write")) await syncNetworkState();
 }
-function wireNavigation(){document.querySelectorAll("[data-scroll]").forEach(b=>b.onclick=()=>document.querySelector(b.dataset.scroll)?.scrollIntoView({behavior:"smooth",block:"start"}));document.querySelectorAll(".sidebar nav a[href]").forEach(a=>a.onclick=()=>{document.querySelectorAll(".sidebar nav a").forEach(x=>x.classList.remove("active"));a.classList.add("active")})}
+function wireNavigation(){
+  document.querySelectorAll("[data-scroll]").forEach(b=>b.onclick=()=>document.querySelector(b.dataset.scroll)?.scrollIntoView({behavior:"smooth",block:"start"}));
+  document.querySelectorAll(".sidebar nav a[href]").forEach(a=>a.onclick=e=>{
+    const target=a.getAttribute("href")||"";
+    if(target.startsWith("#")){
+      const el=document.querySelector(target);
+      if(el){e.preventDefault();history.replaceState(null,"",target);el.scrollIntoView({behavior:"smooth",block:"start"});}
+    }
+    document.querySelectorAll(".sidebar nav a").forEach(x=>x.classList.remove("active"));
+    a.classList.add("active");
+  });
+}
 
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 function options(list,value,empty="— Tidak ada —"){return '<option value="">'+empty+'</option>'+list.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===value?"selected":"")+'>'+esc(x.code||x.name||x.id)+'</option>').join("")}
@@ -483,4 +494,12 @@ function renderOpticalAnalyzer(){
 }
 
 
-(async()=>{if(await initAuth())render()})().catch(err=>{console.error(err);showAuth(err.message||"AUTH_REQUIRED")});
+(async()=>{
+  if(await initAuth()){
+    render();
+    const hash=location.hash;
+    if(hash){
+      requestAnimationFrame(()=>setTimeout(()=>document.querySelector(hash)?.scrollIntoView({behavior:"smooth",block:"start"}),50));
+    }
+  }
+})().catch(err=>{console.error(err);showAuth(err.message||"AUTH_REQUIRED")});
