@@ -67,8 +67,9 @@ tests/
   project-integrity.test.js
 
 supabase/
-  migrations/          # database migrations applied to Supabase
-  functions/           # server-side Edge Functions
+  config.toml
+  migrations/          # remote migration manifest; SQL baseline must stay versioned here
+  functions/            # server-side Edge Functions tracked in source control
 ```
 
 ## Local validation
