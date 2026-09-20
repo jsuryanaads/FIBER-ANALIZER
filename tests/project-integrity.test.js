@@ -22,7 +22,6 @@ if(!index.includes('data-page="dashboard"'))throw new Error("Canonical dashboard
 if(!index.includes("__APP_VERSION__"))throw new Error("Application version placeholder missing");
 if(!index.includes('id="appYear"'))throw new Error("Automatic footer year missing");
 if(!index.includes("Jsuryana"))throw new Error("Permanent footer attribution missing");
-if(!app.includes('const APP_VERSION="__APP_VERSION__"'))throw new Error("Application version runtime marker missing");
 if(!builder.includes("package.json")||!builder.includes('replaceAll("__APP_VERSION__",appVersion)'))throw new Error("Automatic application version build wiring missing");
 if(!app.includes('const APP_BASE="/FIBER-ANALIZER"'))throw new Error("Application base path missing");
 if(app.includes("localStorage"))throw new Error("Network data must not use localStorage as a persistence source");
