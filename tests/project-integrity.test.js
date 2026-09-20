@@ -23,6 +23,9 @@ if(!app.includes('const APP_BASE="/FIBER-ANALIZER"'))throw new Error("Applicatio
 if(app.includes("localStorage"))throw new Error("Network data must not use localStorage as a persistence source");
 if(app.includes("from(\"network_state\").upsert"))throw new Error("Legacy network_state snapshot must not be written");
 if(!app.includes("async function syncNetworkData"))throw new Error("Normalized network persistence service missing");
+if(!app.includes("async function syncOltFoundation"))throw new Error("Normalized OLT foundation persistence service missing");
+if(!app.includes('from("olt_ports")'))throw new Error("OLT port foundation table is not wired");
+if(!app.includes("syncOltFoundation()"))throw new Error("OLT foundation sync is not part of persistence flow");
 for(const form of ["assetForm","cableForm","connectionForm","splitterForm","splitterConnectionForm"])if(!app.includes(`$("`+form+`").onsubmit`))throw new Error(`Persistence handler missing: ${form}`);
 if(!app.includes("from(\"customers\")"))throw new Error("Normalized customer table is not wired");
 if(!workflow.includes("branches:\n      - main"))throw new Error("Pages deployment must be main-only");
