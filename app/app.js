@@ -265,14 +265,17 @@ function save(){
 }
 async function loadOrganizationState(){
   const orgKey="fiber-analyzer-org-"+currentProfile.organization_id;
-  let remote;
-  try{remote=await readNetworkState()}catch(err){console.error("Supabase read failed:",err);remote=null}
+  let remote=null,remoteReadOk=false;
+  try{remote=await readNetworkState();remoteReadOk=true}catch(err){console.error("Supabase read failed:",err)}
   const local=JSON.parse(localStorage.getItem(orgKey)||"null");
-  db=remote?.assets?.length||remote?.cables?.length||remote?.cores?.length?remote:(local||emptyDb());
+  if(remoteReadOk&&(remote?.assets?.length||remote?.cables?.length||remote?.cores?.length)) db=remote;
+  else if(remoteReadOk) db=local||emptyDb();
+  else if(local) db=local;
+  else throw new Error("Data organisasi tidak dapat dibaca dari Supabase dan tidak ada salinan lokal yang tersedia.");
   db.assets=db.assets||[];db.cables=db.cables||[];db.cores=db.cores||[];db.coreConnections=db.coreConnections||[];db.splitterOutputs=db.splitterOutputs||[];db.links=db.links||[];db.logicalLinks=db.logicalLinks||[];db.splices=db.splices||[];db.splitters=db.splitters||[];db.splitterConnections=db.splitterConnections||[];
   migrateLegacyTopology();normalizeOltPorts();normalizeDb();
   localStorage.setItem(orgKey,JSON.stringify(db));
-  if((!remote||(!remote.assets.length&&!remote.cables.length&&!remote.cores.length))&&local&&roleCan("network.write")) await syncNetworkState();
+  if(remoteReadOk&&(!remote?.assets?.length&&!remote?.cables?.length&&!remote?.cores?.length)&&local&&roleCan("network.write")) await syncNetworkState();
 }
 function wireNavigation(){
   document.querySelectorAll("[data-scroll]").forEach(b=>b.onclick=()=>document.querySelector(b.dataset.scroll)?.scrollIntoView({behavior:"smooth",block:"start"}));
