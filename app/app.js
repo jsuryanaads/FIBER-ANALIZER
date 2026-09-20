@@ -1,7 +1,14 @@
 const {createClient}=window.supabase||{};
 if(typeof createClient!=="function") throw new Error("Supabase client library gagal dimuat");
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY} from "./supabase-config.js";
-const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
+  auth:{
+    persistSession:true,
+    autoRefreshToken:true,
+    detectSessionInUrl:true,
+    storageKey:"fiber-analyzer-auth"
+  }
+});
 import {shortestTrace,coreTrace,validateGraph} from "./graph-engine.js";
 const KEY="fiber-analyzer-flex-v3";
 const APP_BASE="/FIBER-ANALIZER";
@@ -20,7 +27,11 @@ const roleCan=permission=>!!currentProfile&&((ROLE_PERMISSIONS[currentProfile.ro
 const canManageUsers=()=>currentProfile?.role==="ADMINISTRATOR";
 
 async function loadProfile(){
-  const {data:{user}}=await supabase.auth.getUser();
+  // Restore the persisted Supabase session before reading the profile.
+  // GitHub Pages reloads must not turn an authenticated user back into the portal selector.
+  const {data:{session},error:sessionError}=await supabase.auth.getSession();
+  if(sessionError) throw sessionError;
+  const user=session?.user||null;
   currentUser=user||null;
   if(!user){currentProfile=null;return null}
   const {data,error}=await supabase.from("profiles").select("id,organization_id,role,name,username,active").eq("id",user.id).maybeSingle();
@@ -95,6 +106,11 @@ async function initAuth(){
 
   try{
     await timeout(loadProfile(),8000);
+    // Give the auth client one refresh cycle when a persisted session exists.
+    if(!currentUser){
+      const {data:{session}}=await supabase.auth.getSession();
+      currentUser=session?.user||null;
+    }
   }catch(err){
     showAuth("Koneksi autentikasi gagal: "+err.message);
     return false;
