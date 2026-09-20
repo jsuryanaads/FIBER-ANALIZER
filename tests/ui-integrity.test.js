@@ -56,3 +56,7 @@ if(!js.includes("function ensureOperationalUI()")||!js.includes("ensureOperation
 if(!js.includes('page==="incident"&&!$(\"addIncident\")'))throw new Error("Incident page operational UI bootstrap missing");
 if(!js.includes("function renderIncidents()")||!js.includes('supabase.from("incidents").insert')||!js.includes('supabase.from("work_orders").insert'))throw new Error("Operational CRUD handlers missing");
 if(!js.includes('requirePermission("customer.write")'))throw new Error("Customer RBAC guard missing");
+
+if(!js.includes('data-incident-edit')||!js.includes('data-incident-del')||!js.includes('data-work-order-edit')||!js.includes('data-work-order-del')||!js.includes('data-customer-edit')||!js.includes('data-customer-del'))throw new Error("Operational edit/delete UI missing");
+if(!js.includes('.upsert(row,{onConflict:"id"})'))throw new Error("Operational upsert missing");
+if(!js.includes('.from("incidents").delete()')||!js.includes('.from("work_orders").delete()'))throw new Error("Operational delete persistence missing");
