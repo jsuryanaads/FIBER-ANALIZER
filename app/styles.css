@@ -155,3 +155,10 @@ dialog h2{line-height:1.25;margin-top:0}
 .settings-card .stats{margin:0}
 .settings-card .settings-card{background:#0a1c2b}
 @media(max-width:800px){.settings-grid{grid-template-columns:1fr}}
+
+/* Mobile navigation: keep the active destination reachable without hiding the rest of the route map. */
+@media(max-width:640px){
+  .sidebar nav{scroll-snap-type:x proximity;padding-inline:8px}
+  .sidebar nav a{scroll-snap-align:center}
+  .sidebar nav a.active{background:#0d63bd;color:#fff}
+}
