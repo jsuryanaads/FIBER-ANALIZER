@@ -105,53 +105,46 @@ async function saveTap(e){e.preventDefault();const cableId=$("tapCable").value,c
 function fillTapForm(){const c=state.cables.map(x=>`<option value="${x.id}">${esc(x.code)} · ${x.fiber_count}C</option>`).join("");$("tapCable").innerHTML=c;fillCores("tapCore",$("tapCable").value);$("tapTarget").innerHTML='<option value="">Tanpa target</option>'+state.assets.filter(x=>["ODC","ODP","ODC_ODP","JB"].includes(x.type)).map(x=>`<option value="${x.id}">${esc(x.code)} · ${x.type}</option>`).join("")}
 function trace(){
  const start=$("traceCore").value;if(!start)return;
- const seenC=new Set(),seenS=new Set(),lines=[],usedPorts=new Set();
+ const lines=[],seenC=new Set(),seenS=new Set(),usedPorts=new Set();
  let coreId=start,guard=0;
  while(coreId&&guard++<200&&!seenC.has(coreId)){
   seenC.add(coreId);
-  const cc=core(coreId),cb=cc&&state.cables.find(x=>x.id===cc.cable_id);
-  if(!cc||!cb)break;
-  lines.push(`${name(cb.from_asset_id)} → ${cb.code} Core ${cc.core_number} → ${name(cb.to_asset_id)}`);
+  const cc=core(coreId),cb=cc&&state.cables.find(x=>x.id===cc.cable_id);if(!cc||!cb)break;
+  lines.push(name(cb.from_asset_id)+" → "+cb.code+" Core "+cc.core_number+" → "+name(cb.to_asset_id));
   const map=state.maps.find(x=>x.status==="ACTIVE"&&x.input_core_id===coreId);
   if(map){coreId=map.output_core_id;continue}
   const tap=state.taps.find(t=>t.core_id===coreId);
   const input=state.splitterInputs.find(x=>x.status==="ACTIVE"&&(x.source_core_id===coreId||x.source_tap_id===tap?.id));
   if(!input){coreId=null;continue}
-  const s=state.splitters.find(x=>x.id===input.splitter_id);
-  if(!s||seenS.has(s.id)){coreId=null;continue}
-  seenS.add(s.id);
-  lines.push(`↳ ${name(s.node_id)} · Stage ${s.stage} · Splitter ${s.ratio} · IN`);
-  const conn=state.splitterConnections.find(x=>x.status!=="RETIRED"&&x.to_splitter_id===s.id);
-  if(conn) lines.push(`↳ INPUT dari Stage ${state.splitters.find(x=>x.id===conn.from_splitter_id)?.stage??"?"} OUT ${conn.from_port}`);
-  const outputs=state.splitterOutputs.filter(x=>x.status!=="RETIRED"&&x.splitter_id===s.id).sort((x,y)=>Number(x.output_port)-Number(y.output_port));
-  const connections=state.splitterConnections.filter(x=>x.status!=="RETIRED"&&x.from_splitter_id===s.id).sort((x,y)=>Number(x.from_port)-Number(y.from_port));
-  outputs.forEach(o=>usedPorts.add(s.id+":"+o.output_port));
-  connections.forEach(o=>usedPorts.add(s.id+":"+o.from_port));
-  const next=connections[0];
-  if(next){
-   const target=state.splitters.find(x=>x.id===next.to_splitter_id);
-   lines.push(`   OUT ${next.from_port} → Stage ${target?.stage??"?"} IN`);
-   const targetInput=state.splitterInputs.find(x=>x.status==="ACTIVE"&&x.splitter_id===next.to_splitter_id);
-   if(targetInput?.source_core_id) coreId=targetInput.source_core_id;
-   else { lines.push("   Menunggu output Stage berikutnya."); coreId=null; }
-   continue;
+  const s=state.splitters.find(x=>x.id===input.splitter_id);if(!s||seenS.has(s.id)){coreId=null;continue}seenS.add(s.id);
+  lines.push("↳ "+name(s.node_id)+" · Stage "+s.stage+" · Splitter "+s.ratio+" · IN");
+  const incoming=state.splitterConnections.find(x=>x.status!=="RETIRED"&&x.to_splitter_id===s.id);
+  if(incoming)lines.push("↳ INPUT dari Stage "+(state.splitters.find(x=>x.id===incoming.from_splitter_id)?.stage??"?")+" OUT "+incoming.from_port);
+  const mappings=Array.from({length:ratioPorts(s.ratio)},(_,i)=>i+1).map(p=>({p,m:portMapping(s,p)}));
+  mappings.forEach(({p,m})=>{if(m)usedPorts.add(s.id+":"+p)});
+  const available=mappings.filter(x=>!x.m);
+  lines.push("   PORT: "+available.length+" tersedia / "+mappings.length+" total");
+  available.forEach(x=>lines.push("   OUT "+x.p+" · TERSEDIA"));
+  const selected=$("traceOutputPort")?.value;
+  const p=selected?Number(selected):null;
+  if(p&&p<=ratioPorts(s.ratio)){
+   const m=portMapping(s,p);if(!m){lines.push("   OUT "+p+" belum terhubung.");coreId=null;continue}
+   if(m.to_splitter_id){
+    const target=state.splitters.find(x=>x.id===m.to_splitter_id);lines.push("   OUT "+p+" → Stage "+(target?.stage??"?")+" IN");
+    const ti=state.splitterInputs.find(x=>x.status==="ACTIVE"&&x.splitter_id===m.to_splitter_id);
+    coreId=ti?.source_core_id||null;continue;
+   }
+   const oc=core(m.core_id),ocb=oc&&state.cables.find(x=>x.id===oc.cable_id);lines.push("   OUT "+p+" → "+(ocb?.code||"Kabel")+" Core "+(oc?.core_number??"?"));coreId=m.core_id;continue;
   }
-  const out=outputs[0];
-  if(out){
-   const oc=core(out.core_id),ocb=oc&&state.cables.find(x=>x.id===oc.cable_id);
-   lines.push(`   OUT ${out.output_port} → ${ocb?.code||"Kabel"} Core ${oc?.core_number??"?"}`);
-   coreId=out.core_id;
-   continue;
-  }
-  lines.push("   Tidak ada output aktif.");
-  coreId=null;
+  const fallback=state.splitterConnections.find(x=>x.status!=="RETIRED"&&x.from_splitter_id===s.id)||state.splitterOutputs.find(x=>x.status!=="RETIRED"&&x.splitter_id===s.id);
+  if(fallback){const p2=Number(fallback.from_port??fallback.output_port),m=fallback;if(m.to_splitter_id){const target=state.splitters.find(x=>x.id===m.to_splitter_id);lines.push("   OUT "+p2+" → Stage "+(target?.stage??"?")+" IN");const ti=state.splitterInputs.find(x=>x.status==="ACTIVE"&&x.splitter_id===m.to_splitter_id);coreId=ti?.source_core_id||null}else{const oc=core(m.core_id),ocb=oc&&state.cables.find(x=>x.id===oc.cable_id);lines.push("   OUT "+p2+" → "+(ocb?.code||"Kabel")+" Core "+(oc?.core_number??"?"));coreId=m.core_id}continue}
+  lines.push("   Belum ada output aktif.");coreId=null;
  }
- const available=[];
- state.splitters.forEach(s=>{for(let p=1;p<=ratioPorts(s.ratio);p++){if(!usedPorts.has(s.id+":"+p))available.push(`${name(s.node_id)} Stage ${s.stage} OUT ${p}`)}}});
- lines.push("",`PORT TERSEDIA: ${available.length}`);
- lines.push(...available.map(x=>"  • "+x));
+ const available=[];state.splitters.forEach(s=>{for(let p=1;p<=ratioPorts(s.ratio);p++)if(!usedPorts.has(s.id+":"+p))available.push(name(s.node_id)+" Stage "+s.stage+" OUT "+p)});
+ lines.push("", "PORT TERSEDIA GLOBAL: "+available.length);available.forEach(x=>lines.push("  • "+x));
  $("traceResult").textContent=lines.join("\n")||"Jalur tidak ditemukan.";
 }
+
 async function saveStage(e){
  e.preventDefault();const node=$("stageNode").value,stage=Number($("stageNumber").value),ratio=$("stageRatio").value,sourceType=$("stageSourceType").value;if(!node||!stage||stage<1||!ratio)return alert("ODC/ODP, stage dan rasio wajib.");const nodeAsset=state.assets.find(x=>x.id===node);if(!["ODC","ODP","ODC_ODP"].includes(nodeAsset&&nodeAsset.type))return alert("Splitter stage hanya boleh berada di ODC/ODP.");
  let src={source_type:sourceType},sourcePort=null;if(sourceType==="JB"){src.source_node_id=$("stageSourceNode").value;const jb=state.assets.find(x=>x.id===src.source_node_id);if(!jb||jb.type!=="JB")return alert("Sumber harus JB.")}if(sourceType==="CABLE_CORE"){src.source_cable_id=$("stageInputCable").value;src.source_core_id=$("stageInputCore").value;const cc=core(src.source_core_id);if(!cc||cc.cable_id!==src.source_cable_id)return alert("Core tidak cocok dengan kabel.")}if(sourceType==="MID_CABLE_TAP"){src.source_tap_id=$("stageSourceTap").value;if(!src.source_tap_id)return alert("Pilih mid-cable tap.")}if(sourceType==="SPLITTER"){src.source_splitter_id=$("stageSourceSplitter").value;sourcePort=Number($("stageSourcePort").value);const s=state.splitters.find(x=>x.id===src.source_splitter_id);if(!s||Number(s.stage)>=stage)return alert("Input splitter harus berasal dari stage sebelumnya.");if(!sourcePort||sourcePort>ratioPorts(s.ratio)||portMapping(s,sourcePort))return alert("Output port sumber tidak tersedia.")}
