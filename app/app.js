@@ -131,7 +131,9 @@ function trace(){
   if(next){
    const target=state.splitters.find(x=>x.id===next.to_splitter_id);
    lines.push(`   OUT ${next.from_port} → Stage ${target?.stage??"?"} IN`);
-   coreId=null;
+   const targetInput=state.splitterInputs.find(x=>x.status==="ACTIVE"&&x.splitter_id===next.to_splitter_id);
+   if(targetInput?.source_core_id) coreId=targetInput.source_core_id;
+   else { lines.push("   Menunggu output Stage berikutnya."); coreId=null; }
    continue;
   }
   const out=outputs[0];
