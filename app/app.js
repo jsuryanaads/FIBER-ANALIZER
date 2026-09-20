@@ -279,7 +279,6 @@ async function syncNetworkState(){
     if(stale.length){const {error}=await supabase.from(table).delete().in("id",stale);if(error)throw error}
     if(data.length){const {error}=await supabase.from(table).upsert(data,{onConflict:"id"});if(error)throw error}
   }
-  await supabase.from("network_state").upsert({organization_id:org,state:db,updated_by:currentUser.id,updated_at:new Date().toISOString()});
 }
 function save(){
   if(!currentProfile)return;
