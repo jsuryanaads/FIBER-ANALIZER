@@ -263,10 +263,49 @@ async function readNetworkData(){
 async function syncOltFoundation(){
   if(!currentProfile||!roleCan("network.write")) return;
   const org=currentProfile.organization_id;
-  const olts=(db.assets||[]).filter(x=>x.type==="OLT").map(x=>({id:x.id,organization_id:org,code:x.code,name:x.name,vendor:null,model:null,serial_number:null,management_ip:null,location_id:null,status:["ACTIVE","INACTIVE","MAINTENANCE","RETIRED"].includes(x.status)?x.status:"ACTIVE",notes:null}));
+  const assets=db.assets||[];
+  const status=v=>["ACTIVE","INACTIVE","MAINTENANCE","RETIRED"].includes(v)?v:"ACTIVE";
+  const byType=type=>assets.filter(x=>x.type===type);
+  const reconcile=async(table,rows)=>{
+    const {data:existing,error:readError}=await supabase.from(table).select("id").eq("organization_id",org);
+    if(readError)throw readError;
+    const wanted=new Set(rows.map(x=>x.id));
+    const stale=(existing||[]).map(x=>x.id).filter(id=>!wanted.has(id));
+    if(stale.length){const {error}=await supabase.from(table).delete().in("id",stale);if(error)throw error}
+    if(rows.length){const {error}=await supabase.from(table).upsert(rows,{onConflict:"id"});if(error)throw error}
+  };
+  const olts=byType("OLT").map(x=>({id:x.id,organization_id:org,code:x.code,name:x.name,vendor:x.vendor||null,model:x.model||null,serial_number:x.serial_number||null,management_ip:x.management_ip||null,location_id:x.location_id||null,status:status(x.status),notes:x.notes||null}));
+  const jbs=byType("JB").map(x=>({id:x.id,organization_id:org,code:x.code,name:x.name,jb_type:x.jb_type||null,capacity:Number(x.capacity)||null,location_id:x.location_id||null,status:status(x.status),notes:x.notes||null}));
+  const odcs=byType("ODC").map(x=>({id:x.id,organization_id:org,code:x.code,name:x.name,capacity:Number(x.capacity)||null,input_ports:Number(x.input_ports)||null,output_ports:Number(x.output_ports)||null,location_id:x.location_id||null,status:status(x.status),notes:x.notes||null}));
+  const odps=byType("ODP").map(x=>({id:x.id,organization_id:org,code:x.code,name:x.name,capacity:Number(x.capacity)||null,port_count:Math.max(1,Number(x.port_count)||8),location_id:x.location_id||null,status:status(x.status),notes:x.notes||null}));
   if(olts.length){const {error}=await supabase.from("olts").upsert(olts,{onConflict:"id"});if(error)throw error}
-  const ports=olts.flatMap(o=>{const asset=db.assets.find(x=>x.id===o.id);return (asset?.olt_ports||[]).map(p=>({id:p.id||crypto.randomUUID(),organization_id:org,olt_id:o.id,port_number:Number(p.port_number)||1,code:p.code||o.code+"-P"+(p.port_number||1),capacity:Number(p.capacity)||1,status:["ACTIVE","INACTIVE","MAINTENANCE","RETIRED"].includes(p.status)?p.status:"ACTIVE",notes:p.notes||null}))});
-  if(ports.length){const {error}=await supabase.from("olt_ports").upsert(ports,{onConflict:"id"});if(error)throw error}
+  if(jbs.length){const {error}=await supabase.from("jbs").upsert(jbs,{onConflict:"id"});if(error)throw error}
+  if(odcs.length){const {error}=await supabase.from("odcs").upsert(odcs,{onConflict:"id"});if(error)throw error}
+  if(odps.length){const {error}=await supabase.from("odps").upsert(odps,{onConflict:"id"});if(error)throw error}
+  const ports=olts.flatMap(o=>{const asset=assets.find(x=>x.id===o.id);return (asset?.olt_ports||[]).map(p=>({id:p.id||crypto.randomUUID(),organization_id:org,olt_id:o.id,port_number:Number(p.port_number)||1,code:p.code||o.code+"-P"+(p.port_number||1),capacity:Number(p.capacity)||1,status:status(p.status),notes:p.notes||null}))});
+  await reconcile("olt_ports",ports);
+  const nodeRows=assets.filter(x=>["OLT","OTB","JB","ODC_ODP","ODC","ODP","CUSTOMER"].includes(x.type)).map(x=>({id:x.id,organization_id:org,node_type:x.type,olt_id:x.type==="OLT"?x.id:null,jb_id:x.type==="JB"?x.id:null,odc_id:x.type==="ODC"?x.id:null,odp_id:x.type==="ODP"?x.id:null}));
+  await reconcile("network_nodes",nodeRows);
+  const cableRows=(db.cables||[]).filter(x=>assets.some(a=>a.id===x.from)&&assets.some(a=>a.id===x.to)).map(x=>({id:x.id,organization_id:org,code:x.code,cable_type:x.cable_type||"FIBER",fiber_count:Math.max(1,Number(x.fiber_count)||1),length_m:Number(x.length_m)||0,origin_node_id:x.from,destination_node_id:x.to,installation_date:x.installation_date||null,status:["PLANNED","ACTIVE","DAMAGED","RETIRED"].includes(x.status)?x.status:"ACTIVE",condition:x.condition||null,route_geometry:x.route_geometry||null,notes:x.notes||null}));
+  await reconcile("cables",cableRows);
+  const cableIds=new Set(cableRows.map(x=>x.id));
+  const coreRows=(db.cores||[]).filter(x=>cableIds.has(x.cable_id)).map(x=>({id:x.id,organization_id:org,cable_id:x.cable_id,core_number:Number(x.core_number)||1,color:x.color||null,status:["AVAILABLE","RESERVED","IN_USE","DAMAGED","RETIRED"].includes(x.status)?x.status:"AVAILABLE",attenuation_db_per_km:x.attenuation_db_per_km==null?null:Number(x.attenuation_db_per_km),notes:x.notes||null}));
+  await reconcile("cable_cores",coreRows);
+  const coreIds=new Set(coreRows.map(x=>x.id));
+  const spliceRows=(db.coreConnections||[]).filter(x=>coreIds.has(x.inputCoreId)&&coreIds.has(x.outputCoreId)&&assets.some(a=>a.id===x.nodeId)).map(x=>({id:x.id,organization_id:org,closure_node_id:x.nodeId,tray:x.tray||null,position:x.position||null,input_core_id:x.inputCoreId,output_core_id:x.outputCoreId,estimated_loss_db:x.estimatedLossDb==null?null:Number(x.estimatedLossDb),measured_loss_db:x.measuredLossDb==null?null:Number(x.measuredLossDb),status:["ACTIVE","INACTIVE","DAMAGED","RETIRED"].includes(x.status)?x.status:"ACTIVE",notes:x.notes||null}));
+  await reconcile("splices",spliceRows);
+  const customerAssets=assets.filter(x=>x.type==="CUSTOMER");
+  const serviceRows=[];
+  for(const customer of customerAssets){
+    try{
+      const olt=assets.find(x=>x.type==="OLT");
+      const trace=olt?coreTrace(db,olt.id,customer.id):null;
+      const firstCable=trace?.found?trace.steps?.find(x=>x.kind==="CABLE"&&x.from===olt.id):null;
+      const port=firstCable?.fromPort?ports.find(x=>x.olt_id===olt.id&&Number(x.port_number)===Number(firstCable.fromPort)):null;
+      if(port)serviceRows.push({id:customer.id,organization_id:org,customer_id:customer.id,olt_port_id:port.id,path_status:customer.status==="ACTIVE"?"ACTIVE":"INACTIVE"});
+    }catch(_){/* service path is created only when a complete core trace exists */}
+  }
+  await reconcile("service_paths",serviceRows);
 }
 async function syncNetworkData(){
   if(!currentProfile||!roleCan("network.write")) return;
