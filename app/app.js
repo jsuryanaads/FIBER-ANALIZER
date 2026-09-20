@@ -334,6 +334,10 @@ function applyPageVisibility(){
     settings:"page-settings-section"
   }[page]||"page-dashboard-section";
   document.querySelectorAll("."+cls).forEach(el=>{el.hidden=false});
+  const labels={dashboard:"Dashboard",topology:"Topology Map",inventory:"Inventory","cable-core":"Cable & Core","trace-analysis":"Trace & Analysis","optical-analyzer":"Optical Analyzer",incident:"Incident","work-order":"Work Order",customer:"Customer",reports:"Reports",users:"Manajemen User",settings:"Settings"};
+  const label=labels[page]||"Dashboard";
+  const crumb=document.querySelector(".crumb b");if(crumb)crumb.textContent=label;
+  document.title="FIBER-ANALYZER — "+label;
   document.querySelectorAll(".sidebar nav a").forEach(a=>{
     const href=a.getAttribute("href")||"";
     a.classList.toggle("active",href.includes("./"+page+".html") || (page==="dashboard"&&href.includes("./index.html")));
