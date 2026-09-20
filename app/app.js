@@ -13,6 +13,8 @@ import {shortestTrace,coreTrace,validateGraph} from "./graph-engine.js";
 const APP_BASE="/FIBER-ANALIZER";
 const route=path=>APP_BASE+path;
 const $=id=>document.getElementById(id);
+const APP_VERSION="__APP_VERSION__";
+const setFooterMeta=()=>{const year=$("appYear");if(year)year.textContent=String(new Date().getFullYear());};
 const ROLE_PERMISSIONS={
   ADMINISTRATOR:["*","user.manage","system.reset","settings.manage"],
   PENGELOLA:["dashboard.read","network.read","network.write","customer.read","customer.write","analysis.use","incident.read","incident.write","workorder.read","workorder.write","report.read"],
@@ -90,6 +92,8 @@ function showAuth(error="",register=false){
     }catch(err){await supabase.auth.signOut();showAuth(err.message)}
   };
 }
+
+setFooterMeta();
 
 async function initAuth(){
   // Render the portal/login UI before any network request. This prevents the
