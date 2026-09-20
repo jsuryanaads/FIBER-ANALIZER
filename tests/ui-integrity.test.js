@@ -40,3 +40,13 @@ if(!js.includes("el.style.display=isAdmin"))throw new Error("Administrator secti
 
 console.log("RBAC UI integrity test passed");
 
+
+const pageFiles=["index.html","topology.html","inventory.html","cable-core.html","trace-analysis.html","optical-analyzer.html","incident.html","work-order.html","customer.html","reports.html","users.html","settings.html"];
+for(const file of pageFiles){
+  const pageHtml=fs.readFileSync(new URL("../app/"+file,import.meta.url),"utf8");
+  if(!pageHtml.includes('src="./app.js"'))throw new Error("app.js missing from "+file);
+  if(!pageHtml.match(/<body[^>]*data-page="[^"]+"/))throw new Error("data-page missing from "+file);
+  if(!pageHtml.includes('<base href="/FIBER-ANALIZER/">'))throw new Error("base path missing from "+file);
+}
+if(!js.includes("remoteReadOk"))throw new Error("Supabase read-failure guard missing");
+if(!js.includes("Data organisasi tidak dapat dibaca dari Supabase"))throw new Error("Remote/local data safety guard missing");
