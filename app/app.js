@@ -238,7 +238,7 @@ function normalizeOltPorts(){for(const a of db.assets.filter(x=>x.type==="OLT"))
 normalizeOltPorts();
 normalizeDb();
 let syncTimer=null;
-async function readNetworkState(){
+async function readNetworkData(){
   const org=currentProfile.organization_id;
   const tables=["network_assets","network_cables","network_cores","network_core_connections","network_splitters","network_splitter_outputs","network_splitter_connections","network_links"];
   const results={};
@@ -289,7 +289,7 @@ function save(){
   }),150);
 }
 async function loadOrganizationState(){
-  const remote=await readNetworkState();
+  const remote=await readNetworkData();
   db=remote||emptyDb();
   db.assets=db.assets||[];db.cables=db.cables||[];db.cores=db.cores||[];db.coreConnections=db.coreConnections||[];db.splitterOutputs=db.splitterOutputs||[];db.links=db.links||[];db.logicalLinks=db.logicalLinks||[];db.splices=db.splices||[];db.splitters=db.splitters||[];db.splitterConnections=db.splitterConnections||[];
   migrateLegacyTopology();normalizeOltPorts();normalizeDb();
@@ -602,7 +602,7 @@ async function refreshRealtimeData(){
   if(!currentProfile)return;
   try{
     const [network,customers,operational]=await Promise.all([
-      readNetworkState(),
+      readNetworkData(),
       (async()=>{const {data,error}=await supabase.from("customers").select("*").eq("organization_id",currentProfile.organization_id).order("created_at",{ascending:true});if(error)throw error;return data||[];})(),
       (async()=>{
         const org=currentProfile.organization_id;
