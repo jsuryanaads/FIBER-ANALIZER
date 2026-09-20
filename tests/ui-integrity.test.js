@@ -34,4 +34,8 @@ if(!js.includes("loadOperationalData")||!js.includes("syncOperationalData")||!js
 if(!js.includes("supabase.auth.signUp"))throw new Error("Administrator registration missing");
 if(!js.includes('supabase.functions.invoke("admin-user"'))throw new Error("Admin user invitation missing");
 if(!js.includes('"/admin/login"')||!js.includes('"/pengelola/login"')||!js.includes('"/teknisi/login"'))throw new Error("Role portal routes missing");
+if(!js.includes("persistSession:true")||!js.includes("storageKey:"fiber-analyzer-auth""))throw new Error("Supabase session persistence missing");
+if(!js.includes("const isAdmin=currentProfile.role==="+""ADMINISTRATOR""))throw new Error("Administrator visibility guard missing");
+if(!js.includes("el.style.display=isAdmin"))throw new Error("Administrator section display logic missing");
+
 console.log("RBAC UI integrity test passed");
