@@ -315,6 +315,27 @@ function applyPageVisibility(){
     a.classList.toggle("active",href.includes("./"+page+".html") || (page==="dashboard"&&href.includes("./index.html")));
   });
 }
+function ensureOperationalUI(){
+  // Operational dialogs live in the shared JS so every role page has the same
+  // CRUD surface, even though the repository keeps lightweight HTML shells.
+  if(!$("incidentDialog")){
+    document.body.insertAdjacentHTML("beforeend",`<dialog id="incidentDialog"><form method="dialog" id="incidentForm"><h2>Tambah Gangguan</h2><label>Kode<input id="incidentCode" required placeholder="INC-001"></label><label>Judul<input id="incidentTitle" required></label><label>Deskripsi<textarea id="incidentDescription"></textarea></label><div class="form-grid"><label>Prioritas<select id="incidentPriority"><option>LOW</option><option selected>MEDIUM</option><option>HIGH</option><option>CRITICAL</option></select></label><label>Status<select id="incidentStatus"><option>OPEN</option><option>IN_PROGRESS</option><option>RESOLVED</option><option>CLOSED</option></select></label></div><label>Asset<select id="incidentAsset"></select></label><div class="actions"><button value="cancel" class="ghost">Batal</button><button value="default">Simpan</button></div></form></dialog>`);
+  }
+  if(!$("workOrderDialog")){
+    document.body.insertAdjacentHTML("beforeend",`<dialog id="workOrderDialog"><form method="dialog" id="workOrderForm"><h2>Tambah Work Order</h2><label>Kode<input id="workOrderCode" required placeholder="WO-001"></label><label>Judul<input id="workOrderTitle" required></label><label>Deskripsi<textarea id="workOrderDescription"></textarea></label><div class="form-grid"><label>Prioritas<select id="workOrderPriority"><option>LOW</option><option selected>MEDIUM</option><option>HIGH</option><option>CRITICAL</option></select></label><label>Status<select id="workOrderStatus"><option>OPEN</option><option>ASSIGNED</option><option>IN_PROGRESS</option><option>DONE</option><option>CANCELLED</option></select></label></div><label>Asset<select id="workOrderAsset"></select></label><div class="actions"><button value="cancel" class="ghost">Batal</button><button value="default">Simpan</button></div></form></dialog>`);
+  }
+  if(!$("customerDialog")){
+    document.body.insertAdjacentHTML("beforeend",`<dialog id="customerDialog"><form method="dialog" id="customerForm"><h2>Tambah Customer</h2><label>Kode Customer<input id="customerCode" required placeholder="CUST-001"></label><label>Nama<input id="customerName" required></label><label>Alamat<textarea id="customerAddress"></textarea></label><div class="form-grid"><label>Status<select id="customerStatus"><option selected>ACTIVE</option><option>SUSPENDED</option><option>DISCONNECTED</option><option>PROSPECT</option></select></label><label>Paket<input id="customerPackage" placeholder="Internet 20 Mbps"></label></div><label>Keterangan<textarea id="customerNotes"></textarea></label><div class="actions"><button value="cancel" class="ghost">Batal</button><button value="default">Simpan</button></div></form></dialog>`);
+  }
+  const page=document.body.dataset.page;
+  if(page==="incident"&&!$("addIncident")){
+    const section=document.querySelector(".page-incident-section");
+    if(section){
+      section.innerHTML='<div class="panel-head"><div><h2>Gangguan</h2><span class="muted">Incident operasional organisasi</span></div><button id="addIncident" class="ghost">＋ Gangguan</button></div><div id="incidentList" class="incident-grid"></div>';
+    }
+  }
+}
+ensureOperationalUI();
 function renderIncidents(){
   const el=$("incidentList");if(!el)return;
   const rows=db.incidents||[];
