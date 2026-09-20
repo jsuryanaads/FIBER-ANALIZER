@@ -304,16 +304,46 @@ async function loadOrganizationState(){
   db.assets=db.assets||[];db.cables=db.cables||[];db.cores=db.cores||[];db.coreConnections=db.coreConnections||[];db.splitterOutputs=db.splitterOutputs||[];db.links=db.links||[];db.logicalLinks=db.logicalLinks||[];db.splices=db.splices||[];db.splitters=db.splitters||[];db.splitterConnections=db.splitterConnections||[];
   migrateLegacyTopology();normalizeOltPorts();normalizeDb();
 }
+const PAGE_ROUTES={
+  dashboard:"./index.html",
+  topology:"./topology.html",
+  inventory:"./inventory.html",
+  "cable-core":"./cable-core.html",
+  "trace-analysis":"./trace-analysis.html",
+  "optical-analyzer":"./optical-analyzer.html",
+  incident:"./incident.html",
+  "work-order":"./work-order.html",
+  customer:"./customer.html",
+  reports:"./reports.html",
+  users:"./users.html",
+  settings:"./settings.html"
+};
+function navigatePage(page,hash=""){
+  const target=PAGE_ROUTES[page]||PAGE_ROUTES.dashboard;
+  location.href=target+(hash||"");
+}
 function wireNavigation(){
-  document.querySelectorAll("[data-scroll]").forEach(b=>b.onclick=()=>document.querySelector(b.dataset.scroll)?.scrollIntoView({behavior:"smooth",block:"start"}));
+  document.querySelectorAll("[data-scroll]").forEach(b=>b.onclick=()=>{
+    const el=document.querySelector(b.dataset.scroll);
+    if(el)el.scrollIntoView({behavior:"smooth",block:"start"});
+  });
   document.querySelectorAll(".sidebar nav a[href]").forEach(a=>a.onclick=e=>{
     const target=a.getAttribute("href")||"";
     if(target.startsWith("#")){
       const el=document.querySelector(target);
       if(el){e.preventDefault();history.replaceState(null,"",target);el.scrollIntoView({behavior:"smooth",block:"start"});}
     }
-    document.querySelectorAll(".sidebar nav a").forEach(x=>x.classList.remove("active"));
-    a.classList.add("active");
+  });
+  document.querySelectorAll("[data-page-link]").forEach(el=>el.onclick=e=>{
+    const page=el.dataset.pageLink;
+    if(!PAGE_ROUTES[page])return;
+    e.preventDefault();
+    navigatePage(page,el.dataset.pageHash||"");
+  });
+  document.querySelectorAll("[data-page-link]").forEach(el=>{
+    el.setAttribute("role","link");
+    el.setAttribute("tabindex","0");
+    el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();el.click()}};
   });
 }
 
