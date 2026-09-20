@@ -602,8 +602,9 @@ function ensureRealtimeUI(){
 async function refreshRealtimeData(){
   if(!currentProfile)return;
   try{
-    const [network,operational]=await Promise.all([
+    const [network,customers,operational]=await Promise.all([
       readNetworkState(),
+      (async()=>{const {data,error}=await supabase.from("customers").select("*").eq("organization_id",currentProfile.organization_id).order("created_at",{ascending:true});if(error)throw error;return data||[];})(),
       (async()=>{
         const org=currentProfile.organization_id;
         const [{data:incidents,error:incidentError},{data:workOrders,error:workOrderError}]=await Promise.all([
@@ -616,6 +617,8 @@ async function refreshRealtimeData(){
       })()
     ]);
     db={...network,...operational};
+    db.assets=(db.assets||[]).filter(x=>x.type!=="CUSTOMER");
+    (customers||[]).forEach(x=>db.assets.push({id:x.id,type:"CUSTOMER",code:x.customer_code,name:x.name,status:x.service_status||"PROSPECT",port_count:1,address:x.address||"",package:x.package_name||"",notes:x.notes||"",odp_id:x.odp_id||null,odp_port:x.odp_port||null}));
     db.assets=db.assets||[];db.cables=db.cables||[];db.cores=db.cores||[];db.coreConnections=db.coreConnections||[];
     db.splitters=db.splitters||[];db.splitterOutputs=db.splitterOutputs||[];db.splitterConnections=db.splitterConnections||[];
     db.links=db.links||[];db.logicalLinks=db.logicalLinks||[];db.splices=db.splices||[];
@@ -642,7 +645,7 @@ function setupRealtime(){
     realtimeChannel=null;
   }
   const org=currentProfile.organization_id;
-  const tables=["network_assets","network_cables","network_cores","network_core_connections","network_splitters","network_splitter_outputs","network_splitter_connections","network_links","incidents","work_orders","profiles"];
+  const tables=["network_assets","network_cables","network_cores","network_core_connections","network_splitters","network_splitter_outputs","network_splitter_connections","network_links","customers","incidents","work_orders","profiles"];
   const channel=supabase.channel("fiber-analyzer-org-"+org);
   tables.forEach(table=>{
     channel.on("postgres_changes",{event:"*",schema:"public",table,filter:"organization_id=eq."+org},scheduleRealtimeRefresh);
