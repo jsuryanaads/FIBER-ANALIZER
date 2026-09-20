@@ -2,6 +2,7 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./supabase-config.js";
 
 const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:"fiber-analyzer-auth"}});
+const traceChoices={};
 const state={session:null,profile:null,assets:[],cables:[],cores:[],maps:[],splitters:[],splitterInputs:[],splitterOutputs:[],splitterConnections:[],taps:[],sub:null};
 const $=id=>document.getElementById(id), esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const page=document.body.dataset.page||location.pathname.split("/").pop().replace(".html","")||"dashboard";
@@ -63,7 +64,7 @@ function render(){
  $("topology").innerHTML=state.assets.map(x=>`<div class="node"><label>${esc(x.type)}</label><strong>${esc(x.code)}</strong><small>${esc(x.name)} · ${x.port_count||0} port</small></div>`).join("")||"<div class='panel'>Belum ada asset.</div>";
  $("activePath").innerHTML=state.cables[0]?`<div>${name(state.cables[0].from_asset_id)} → ${esc(state.cables[0].code)} ${state.cables[0].fiber_count}C → ${name(state.cables[0].to_asset_id)}</div>`:"<div>Belum ada jalur.</div>";
  const tc=$("traceCore");if(tc)tc.innerHTML='<option value="">Pilih core</option>'+state.cores.map(c=>`<option value="${c.id}">${coreLabel(c.id)} · ${c.status}</option>`).join("");
- renderStages();
+ renderStages();renderTraceBuilder();
 }
 function ratioPorts(r){return Number(String(r).split("/")[1])||0}
 function portMapping(s,p){return state.splitterOutputs.find(x=>x.splitter_id===s.id&&Number(x.output_port)===p&&x.status!=="RETIRED")||state.splitterConnections.find(x=>x.from_splitter_id===s.id&&Number(x.from_port)===p&&x.status!=="RETIRED")}
@@ -103,6 +104,16 @@ async function saveCable(e){e.preventDefault();const from=$("cableFrom").value,t
 async function saveMap(e){e.preventDefault();const ic=$("mapInputCable").value,oc=$("mapOutputCable").value,i=$("mapInputCore").value,o=$("mapOutputCore").value,node=$("mapNode").value;if(ic===oc||i===o)return alert("Input dan output harus berbeda.");if(state.maps.some(x=>x.status==="ACTIVE"&&x.output_core_id===o))return alert("Output core sudah digunakan.");const {error}=await supabase.from("network_core_connections").insert({organization_id:state.profile.organization_id,node_id:node,input_cable_id:ic,output_cable_id:oc,input_core_id:i,output_core_id:o,connection_type:"SPLICE",status:$("mapStatus").value,extra:{source:"fiber-stage-v2"}});if(error)return alert(error.message);await supabase.from("network_cores").update({status:"IN_USE"}).in("id",[i,o]);$("mapDialog").close();await load()}
 async function saveTap(e){e.preventDefault();const cableId=$("tapCable").value,coreId=$("tapCore").value,code=$("tapCode").value.trim(),pct=$("tapPct").value===""?null:Number($("tapPct").value),meters=$("tapMeters").value===""?null:Number($("tapMeters").value),target=$("tapTarget").value||null;if(!cableId||!coreId||!code)return alert("Kabel, core dan code wajib.");const c=core(coreId);if(!c||c.cable_id!==cableId)return alert("Core tidak cocok dengan kabel.");if(pct===null&&meters===null)return alert("Isi posisi tap dalam meter atau persen.");const {error}=await supabase.from("network_cable_taps").insert({organization_id:state.profile.organization_id,cable_id:cableId,core_id:coreId,tap_position_m:meters,tap_position_pct:pct,code,label:$("tapLabel").value.trim()||null,target_node_id:target,status:"ACTIVE",extra:{source:"fiber-stage-v2"}});if(error)return alert(error.message);$("tapDialog").close();e.target.reset();await load()}
 function fillTapForm(){const c=state.cables.map(x=>`<option value="${x.id}">${esc(x.code)} · ${x.fiber_count}C</option>`).join("");$("tapCable").innerHTML=c;fillCores("tapCore",$("tapCable").value);$("tapTarget").innerHTML='<option value="">Tanpa target</option>'+state.assets.filter(x=>["ODC","ODP","ODC_ODP","JB"].includes(x.type)).map(x=>`<option value="${x.id}">${esc(x.code)} · ${x.type}</option>`).join("")}
+function renderTraceBuilder(){
+ const box=$("tracePathBuilder");if(!box)return;
+ const active=state.splitters.slice().sort((a,b)=>Number(a.stage)-Number(b.stage)||name(a.node_id).localeCompare(name(b.node_id)));
+ if(!active.length){box.innerHTML="";return}
+ box.innerHTML='<div class="trace-builder-head"><strong>FIBER PATH BUILDER</strong><small>Pilih OUT pada setiap splitter yang ingin dilalui.</small></div>'+active.map(s=>{
+  const opts=Array.from({length:ratioPorts(s.ratio)},(_,i)=>i+1).map(p=>{const m=portMapping(s,p);return '<option value="'+p+'" '+(Number(traceChoices[s.id])===p?'selected':'')+(m?'':' disabled')+'>OUT '+p+' · '+(m?portLabel(s,p):'TERSEDIA')+'</option>'}).join("");
+  return '<div class="trace-stage-card"><div><strong>'+esc(name(s.node_id))+'</strong><span>Stage '+s.stage+' · '+esc(s.ratio)+'</span></div><select data-trace-splitter="'+s.id+'"><option value="">Pilih OUT</option>'+opts+'</select></div>'
+ }).join("");
+ box.querySelectorAll("[data-trace-splitter]").forEach(el=>el.onchange=()=>{traceChoices[el.dataset.traceSplitter]=Number(el.value)||null;const s=state.splitters.find(x=>x.id===el.dataset.traceSplitter);if(s&&s.id===(state.splitters.find(x=>x.id===s.id)?.id)){$("traceOutputPort").value=el.value||""}trace()});
+}
 function refreshTracePorts(){const coreId=$("traceCore").value,box=$("traceOutputPort");if(!box)return;const cc=core(coreId);const tap=state.taps.find(t=>t.core_id===coreId);const i=state.splitterInputs.find(x=>x.status==="ACTIVE"&&(x.source_core_id===coreId||x.source_tap_id===tap?.id));const s=i&&state.splitters.find(x=>x.id===i.splitter_id);box.innerHTML="<option value=\"\">OUT otomatis</option>";if(!s)return;for(let p=1;p<=ratioPorts(s.ratio);p++){const m=portMapping(s,p);const o=document.createElement("option");o.value=p;o.textContent="OUT "+p+" · "+(m?portLabel(s,p):"TERSEDIA");box.appendChild(o)}}
 function trace(){
  const start=$("traceCore").value;if(!start)return;
@@ -126,7 +137,7 @@ function trace(){
   const available=mappings.filter(x=>!x.m);
   lines.push("   PORT: "+available.length+" tersedia / "+mappings.length+" total");
   available.forEach(x=>lines.push("   OUT "+x.p+" · TERSEDIA"));
-  const selected=$("traceOutputPort")?.value;
+  const selected=traceChoices[s.id]||$("traceOutputPort")?.value;
   const p=selected?Number(selected):null;
   if(p&&p<=ratioPorts(s.ratio)){
    const m=portMapping(s,p);if(!m){lines.push("   OUT "+p+" belum terhubung.");coreId=null;continue}
