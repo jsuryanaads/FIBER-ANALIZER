@@ -140,6 +140,7 @@ async function initAuth(){
 
   try{
     await timeout(loadOrganizationState(),8000);
+    await timeout(loadCustomers(),8000);
     await timeout(loadOperationalData(),8000);
   }catch(err){
     // A valid Supabase session must never be converted into a login screen
@@ -509,6 +510,33 @@ function renderTopologyMap(){
   const nodes=assets.map(a=>{const p=pos.get(a.id),c=color[a.type]||"#8aa5b8";return'<g><rect x="'+(p.x-48)+'" y="'+(p.y-27)+'" width="96" height="54" rx="9" fill="#0d3450" stroke="'+c+'" stroke-width="2"/><text x="'+p.x+'" y="'+(p.y-4)+'" fill="#e7f0f8" text-anchor="middle" font-size="11" font-weight="700">'+esc(typeLabel(a.type))+'</text><text x="'+p.x+'" y="'+(p.y+13)+'" fill="#a8bfd0" text-anchor="middle" font-size="9">'+esc(a.code)+'</text></g>'}).join("");
   const legend='<g transform="translate(14 350)"><rect width="250" height="45" rx="7" fill="#071321" fill-opacity=".94" stroke="#345269"/><text x="10" y="16" fill="#e7f0f8" font-size="10" font-weight="700">Topology Aktif</text><text x="10" y="32" fill="#9db3c5" font-size="9">'+(db.cables||[]).length+' kabel · '+(db.links||[]).length+' service link · '+assets.length+' node</text></g>';
   el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet">'+lines+nodes+legend+'</svg>';
+}
+async function loadCustomers(){
+  if(!currentProfile)return;
+  const {data,error}=await supabase.from("customers").select("*").eq("organization_id",currentProfile.organization_id).order("created_at",{ascending:true});
+  if(error)throw error;
+  const customerRows=data||[];
+  const byId=new Map(customerRows.map(x=>[x.id,x]));
+  db.assets=(db.assets||[]).filter(x=>x.type!=="CUSTOMER");
+  customerRows.forEach(x=>db.assets.push({
+    id:x.id,type:"CUSTOMER",code:x.customer_code,name:x.name,status:x.service_status||"PROSPECT",
+    port_count:1,address:x.address||"",package:x.package_name||"",notes:x.notes||"",odp_id:x.odp_id||null,odp_port:x.odp_port||null
+  }));
+}
+async function syncCustomers(){
+  if(!currentProfile||!roleCan("customer.write"))return;
+  const org=currentProfile.organization_id;
+  const rows=(db.assets||[]).filter(x=>x.type==="CUSTOMER").map(x=>({
+    id:x.id,organization_id:org,customer_code:x.code,name:x.name,address:x.address||null,
+    service_status:["ACTIVE","SUSPENDED","DISCONNECTED","PROSPECT"].includes(x.status)?x.status:"PROSPECT",
+    odp_id:x.odp_id||null,odp_port:x.odp_port?Number(x.odp_port):null,package_name:x.package||null,notes:x.notes||null
+  }));
+  const {data:existing,error:e}=await supabase.from("customers").select("id").eq("organization_id",org);
+  if(e)throw e;
+  const wanted=new Set(rows.map(x=>x.id));
+  const stale=(existing||[]).map(x=>x.id).filter(id=>!wanted.has(id));
+  if(stale.length){const {error}=await supabase.from("customers").delete().in("id",stale);if(error)throw error}
+  if(rows.length){const {error}=await supabase.from("customers").upsert(rows,{onConflict:"id"});if(error)throw error}
 }
 async function loadOperationalData(){
   if(!currentProfile)return;
