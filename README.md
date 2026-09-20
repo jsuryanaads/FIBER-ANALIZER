@@ -1,32 +1,101 @@
 # FIBER-ANALIZER
 
-Fiber-optic network management and optical analysis foundation.
+**Fiber Network Management & Optical Analysis**
+
+FIBER-ANALIZER adalah aplikasi web untuk inventarisasi jaringan fiber, pemetaan topology, cable/core continuity, service tracing, optical-loss analysis, incident, dan work order.
 
 ## Canonical topology
 
-**OLT → PON → JB → ODC → ODP → Customer**
+**OLT → OLT Port → OTB → JB → BOX ODC-ODP → BOX ODC → BOX ODP → Customer**
 
-Physical fiber cables, cores, ports and splices are modeled independently so the system can support path tracing, capacity management, optical analysis, field operations and GIS.
+Topology diimplementasikan sebagai **flexible graph**. Urutan di atas adalah topology layanan utama, bukan constraint bahwa semua kabel harus mengikuti urutan tersebut. Setiap node yang didukung dapat terhubung melalui kabel fisik selama endpoint dan core continuity valid.
 
-## Current phase
+### Node aktif
 
-Phase 1 foundation:
-- documented system scope
-- PostgreSQL-compatible network schema
-- cable/core/port/splice model
-- optical-analysis requirements
-- phased roadmap
+| Type | Label UI |
+|---|---|
+| OLT | OLT |
+| OTB | OTB |
+| JB | JB |
+| ODC_ODP | BOX ODC-ODP |
+| ODC | BOX ODC |
+| ODP | BOX ODP |
+| CUSTOMER | PELANGGAN |
 
-See:
-- [Project Scope](docs/PROJECT_SCOPE.md)
-- [Data Model](docs/DATA_MODEL.md)
-- [Optical Analysis](docs/OPTICAL_ANALYSIS.md)
-- [Feature Roadmap](docs/FEATURE_ROADMAP.md)
-- [Database Foundation](database/001_fiber_network_foundation.sql)
+**PON/OLT_PON/OBT bukan lagi layer aktif.** OLT Port menjadi source endpoint independen.
 
-## Engineering rule
+## Fitur saat ini
 
-Do not hard-code vendor-specific optical loss values or network assumptions into the core data model. Keep engineering parameters configurable and preserve calculation inputs for auditability.
+- Supabase Auth + RBAC: Administrator, Pengelola, Teknisi.
+- Multi-tenant organization isolation dengan PostgreSQL RLS.
+- Inventory OLT, OTB, JB, ODC-ODP, ODC, ODP, Customer.
+- OLT port inventory.
+- Cable CRUD dengan kapasitas core fleksibel.
+- Core inventory dan core continuity/splice mapping.
+- Flexible branching topology.
+- Internal splitter patching.
+- Customer path tracing berbasis core.
+- Optical Analyzer dengan wavelength-aware attenuation.
+- Incident dan Work Order persistence di Supabase.
+- GitHub Pages deployment.
+- Automated JavaScript integrity/topology tests.
 
+## Project structure
 
-Deployment: GitHub Pages via `.github/workflows/deploy-pages.yml`.
+```text
+app/
+  index.html          # application shell + dialogs
+  styles.css          # global UI styles
+  app.js              # application orchestration/UI event handlers
+  graph-engine.js     # topology graph, validation, core trace
+  supabase-config.js  # public browser configuration; deployment may inject values
+
+database/
+  001_fiber_network_foundation.sql
+
+docs/
+  ARCHITECTURE.md
+  PROJECT_SCOPE.md
+  DATA_MODEL.md
+  OPTICAL_ANALYSIS.md
+  FEATURE_ROADMAP.md
+
+tests/
+  graph-engine.test.js
+  topology-engine.test.js
+  ui-integrity.test.js
+  project-integrity.test.js
+
+supabase/
+  migrations/          # database migrations applied to Supabase
+  functions/           # server-side Edge Functions
+```
+
+## Local validation
+
+Requires Node.js 22+.
+
+```bash
+npm test
+```
+
+## Deployment
+
+GitHub Pages is deployed from `main` through:
+
+```text
+.github/workflows/deploy-pages.yml
+```
+
+Supabase service-role credentials must **never** be committed to the repository or exposed to browser code. Only the public/publishable client key may be used in the frontend, protected by RLS.
+
+## Engineering rules
+
+1. Network topology and core continuity are authoritative; UI labels must not introduce a second topology model.
+2. Customer/service data must not be represented by hard-coded demo incidents or fake operational counters.
+3. Optical calculations expose their assumptions and do not hide engineering inputs.
+4. All write operations are subject to RBAC and database RLS.
+5. Historical references should be preserved through status/retirement rather than destructive deletion where required.
+6. Vendor-specific integrations belong behind adapters and must not become part of the core topology model.
+
+See [Architecture](docs/ARCHITECTURE.md) for the system boundaries and data flow.
