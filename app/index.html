@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="id"><head><base href="/FIBER-ANALIZER/"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FIBER-ANALYZER — Fiber Network Management</title><link rel="stylesheet" href="./styles.css?v=20260920-05"></head>
+<title>FIBER-ANALYZER — Fiber Network Management</title><link rel="stylesheet" href="./styles.css?v=20260920-06"></head>
 <body data-page="dashboard">
 
 <div id="authScreen"><div id="authCard"><div class="brand"><div class="brand-mark">⌁</div><div><strong>FIBER-ANALYZER</strong><small>Secure Access</small></div></div><div id="authBody"><h2>Secure Access</h2><p>Memuat sistem autentikasi...</p></div></div></div>
@@ -35,7 +35,36 @@
 <div class="workspace">
 <header class="topbar"><div class="crumb">Home / <b>Dashboard</b></div><div class="search-wrap">⌕<input id="search" placeholder="Cari asset, kabel, core, atau pelanggan..."></div><div class="top-actions"><span id="realtimeStatus" class="realtime-status">CONNECTING</span><div class="avatar" id="userAvatar">AD</div><div><b id="userName">Administrator</b><small id="userRole">Administrator</small></div><button id="logoutBtn" class="ghost">Keluar</button></div></header>
 <main id="dashboard">
-<section class="hero page-section page-dashboard-section"><div><span class="eyebrow">NETWORK OPERATIONS CENTER</span><h1>Dashboard</h1><p>Monitor, trace, dan analisis jaringan fiber optik secara terintegrasi.</p></div></section>
+<section class="hero page-section page-dashboard-section"><div><span class="eyebrow">FIBER NETWORK CONTROL CENTER</span><h1>Dashboard</h1><p>Bangun dan telusuri jaringan dari <b>OLT → OTB → JB → GP</b> sampai pelanggan.</p></div><div class="hero-actions"><a class="hero-action" href="./topology.html">⌖ Buka Topologi</a><a class="hero-action primary" href="./inventory.html">＋ Kelola OLT</a></div></section>
+<section class="fiber-flow panel page-section page-dashboard-section" aria-label="Struktur utama jaringan fiber">
+  <div class="fiber-flow-head"><div><span class="eyebrow">MASTER TOPOLOGY</span><h2>Struktur Jalur Utama</h2><span class="muted">Urutan dasar yang kita tetapkan: OLT sebagai sumber, OTB sebagai titik terminasi, JB sebagai distribusi, lalu GP / Pelanggan.</span></div><span class="flow-live"><i></i> LIVE MODEL</span></div>
+  <div class="fiber-flow-canvas">
+    <div class="fiber-node olt"><div class="node-icon">OLT</div><div><strong>OLT</strong><span>Optical Line Terminal</span></div><b>PORT 1–6</b></div>
+    <div class="fiber-link"><span>Port 1–6</span><i></i></div>
+    <div class="fiber-node otb"><div class="node-icon">OTB</div><div><strong>OTB</strong><span>Optical Terminal Box</span></div><b>CORE 1–6</b></div>
+    <div class="fiber-link"><span>24 CORE</span><i></i></div>
+    <div class="fiber-node jb"><div class="node-icon">JB 1</div><div><strong>JB 1</strong><span>Joint Box</span></div><b>6 CORE</b></div>
+    <div class="fiber-branch">
+      <div class="branch-label">DISTRIBUSI CORE</div>
+      <div class="branch-row"><span class="core-dot c1"></span><b>Core 1–3</b><i></i><strong>JB 2</strong><small>Port 1–3 → GP</small></div>
+      <div class="branch-row"><span class="core-dot c4"></span><b>Core 4–6</b><i></i><strong>JB 3</strong><small>Port 1–3 → GP</small></div>
+    </div>
+    <div class="fiber-node gp"><div class="node-icon">GP</div><div><strong>GP / PELANGGAN</strong><span>Garis Pelanggan</span></div><b>ACTIVE</b></div>
+  </div>
+  <div class="fiber-flow-foot">
+    <div><span class="port-dot p-blue"></span><b>OLT 1–3</b><span>→ OTB → JB 1 → Core 1–3 → JB 2</span></div>
+    <div><span class="port-dot p-red"></span><b>OLT 4–6</b><span>→ OTB → JB 1 → Core 4–6 → JB 3</span></div>
+    <a href="./cable-core.html">Kelola Core & Kabel →</a>
+  </div>
+</section>
+<section class="stats network-kpis page-section page-dashboard-section">
+  <div class="stat kpi-olt"><span>OLT Port</span><b>6</b><em>Port 1–6</em></div>
+  <div class="stat kpi-otb"><span>OTB</span><b>1</b><em>Titik terminasi</em></div>
+  <div class="stat kpi-jb"><span>Joint Box</span><b>3</b><em>JB 1–3</em></div>
+  <div class="stat kpi-core"><span>Core Path</span><b>6</b><em>Core 1–6</em></div>
+  <div class="stat kpi-gp"><span>GP</span><b>6</b><em>Garis pelanggan</em></div>
+  <div class="stat kpi-live"><span>Status</span><b>LIVE</b><em>Realtime</em></div>
+</section>
 <section class="dashboard-grid page-section page-dashboard-section">
   <section class="panel quick-panel page-section page-dashboard-section"><div class="panel-head"><div><h2>Akses Modul</h2><span class="muted">Pilih modul sesuai pekerjaan</span></div></div><div class="quick-grid">
     <a href="./topology.html"><b>Topology</b><span>Peta dan struktur jaringan</span></a>
