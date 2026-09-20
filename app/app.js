@@ -315,6 +315,53 @@ function applyPageVisibility(){
     a.classList.toggle("active",href.includes("./"+page+".html") || (page==="dashboard"&&href.includes("./index.html")));
   });
 }
+function renderIncidents(){
+  const el=$("incidentList");if(!el)return;
+  const rows=db.incidents||[];
+  el.innerHTML=rows.map(x=>'<div><b>'+esc(x.code||x.id)+'</b><span>'+esc(x.title||"Gangguan")+'</span><em class="'+(x.priority==="CRITICAL"||x.priority==="HIGH"?"danger-text":x.status==="CLOSED"?"success-text":"warn-text")+'">'+esc(x.status||"OPEN")+'</em><small class="muted">'+esc(x.description||"")+'</small></div>').join("")||'<div><b>Tidak ada gangguan</b><span class="muted">Belum ada incident aktif.</span></div>';
+}
+function fillOperationalAssetSelect(id){
+  const el=$(id);if(!el)return;
+  el.innerHTML='<option value="">— Tidak dipilih —</option>'+db.assets.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.code)+' — '+esc(x.name)+'</option>').join("");
+}
+function openIncident(){
+  if(!requirePermission("incident.write"))return;
+  $("incidentCode").value="INC-"+String((db.incidents||[]).length+1).padStart(3,"0");
+  $("incidentTitle").value="";$("incidentDescription").value="";$("incidentPriority").value="MEDIUM";$("incidentStatus").value="OPEN";fillOperationalAssetSelect("incidentAsset");$("incidentDialog").showModal();
+}
+function openWorkOrder(){
+  if(!requirePermission("workorder.write"))return;
+  $("workOrderCode").value="WO-"+String((db.workOrders||[]).length+1).padStart(3,"0");
+  $("workOrderTitle").value="";$("workOrderDescription").value="";$("workOrderPriority").value="MEDIUM";$("workOrderStatus").value="OPEN";fillOperationalAssetSelect("workOrderAsset");$("workOrderDialog").showModal();
+}
+function openCustomer(){
+  if(!requirePermission("customer.write"))return;
+  $("customerCode").value="CUST-"+String(db.assets.filter(x=>x.type==="CUSTOMER").length+1).padStart(3,"0");
+  $("customerName").value="";$("customerAddress").value="";$("customerStatus").value="ACTIVE";$("customerPackage").value="";$("customerNotes").value="";$("customerDialog").showModal();
+}
+$("addIncident")?.addEventListener("click",openIncident);
+$("addWorkOrder")?.addEventListener("click",openWorkOrder);
+$("addCustomer")?.addEventListener("click",openCustomer);
+$("incidentForm")?.addEventListener("submit",async e=>{
+  e.preventDefault();if(!requirePermission("incident.write"))return;
+  const row={id:crypto.randomUUID(),organization_id:currentProfile.organization_id,code:$("incidentCode").value.trim(),title:$("incidentTitle").value.trim(),description:$("incidentDescription").value.trim()||null,priority:$("incidentPriority").value,status:$("incidentStatus").value,asset_id:$("incidentAsset").value||null,reported_by:currentUser.id,opened_at:new Date().toISOString()};
+  const {data,error}=await supabase.from("incidents").insert(row).select("*").single();
+  if(error){alert(error.message);return}
+  db.incidents=[data,...(db.incidents||[])];$("incidentDialog").close();renderIncidents();renderCondition();
+});
+$("workOrderForm")?.addEventListener("submit",async e=>{
+  e.preventDefault();if(!requirePermission("workorder.write"))return;
+  const row={id:crypto.randomUUID(),organization_id:currentProfile.organization_id,code:$("workOrderCode").value.trim(),title:$("workOrderTitle").value.trim(),description:$("workOrderDescription").value.trim()||null,priority:$("workOrderPriority").value,status:$("workOrderStatus").value,asset_id:$("workOrderAsset").value||null,created_by:currentUser.id};
+  const {data,error}=await supabase.from("work_orders").insert(row).select("*").single();
+  if(error){alert(error.message);return}
+  db.workOrders=[data,...(db.workOrders||[])];$("workOrderDialog").close();renderWorkOrders();renderCondition();
+});
+$("customerForm")?.addEventListener("submit",async e=>{
+  e.preventDefault();if(!requirePermission("customer.write"))return;
+  const item={id:crypto.randomUUID(),type:"CUSTOMER",code:$("customerCode").value.trim(),name:$("customerName").value.trim(),status:$("customerStatus").value,port_count:1,address:$("customerAddress").value.trim(),package:$("customerPackage").value.trim(),notes:$("customerNotes").value.trim()};
+  if(!item.code||!item.name){alert("Kode dan nama customer wajib diisi.");return}
+  db.assets.push(item);save();$("customerDialog").close();render();
+});
 function renderWorkOrders(){
   const el=$("workOrderList");if(!el)return;
   const rows=db.workOrders||[];
@@ -336,7 +383,7 @@ function renderSettings(){
   el.innerHTML='<div class="cable-card"><b>Akun</b><div class="muted">'+esc(currentProfile.name||currentUser?.email||"-")+' · '+esc(currentProfile.role)+'</div></div><div class="cable-card"><b>Organization</b><div class="muted">'+esc(currentProfile.organization_id)+'</div></div><div class="cable-card"><b>Session</b><div class="muted">Supabase Auth · Session tersimpan otomatis</div></div>';
 }
 function render(){
-  wireNavigation();renderStats();renderTopologyMap();renderCondition();renderAssets();renderCustomers();renderCores();renderCables();renderOltPorts();renderConnections();renderSplitters();renderSplitterConnections();renderOpticalAnalyzer();renderUsers();renderWorkOrders();renderCustomerPage();renderReports();renderSettings();applyPageVisibility();
+  wireNavigation();renderStats();renderTopologyMap();renderIncidents();renderCondition();renderAssets();renderCustomers();renderCores();renderCables();renderOltPorts();renderConnections();renderSplitters();renderSplitterConnections();renderOpticalAnalyzer();renderUsers();renderWorkOrders();renderCustomerPage();renderReports();renderSettings();applyPageVisibility();
 }
 function nodeOptions(value=""){return '<option value="">— Pilih node —</option>'+db.assets.map(a=>'<option value="'+esc(a.id)+'" '+(a.id===value?"selected":"")+'>'+esc(a.code)+' — '+esc(a.name)+'</option>').join("")}
 function portOptions(nodeId,value=""){const a=db.assets.find(x=>x.id===nodeId);const count=Math.max(1,Number(a?.port_count)||(a?.type==="OLT"?16:1));return Array.from({length:count},(_,i)=>{const n=i+1;return `<option value="${n}" ${String(n)===String(value)?"selected":""}>Port ${n}</option>`}).join("")} function syncCablePorts(){$("cableFromPort").innerHTML=portOptions($("cableFrom").value,$("cableFromPort").value);$("cableToPort").innerHTML=portOptions($("cableTo").value,$("cableToPort").value)} function openCable(c){c=c||{};$("cableId").value=c.id||"";$("cableCode").value=c.code||"";$("cableFrom").innerHTML=nodeOptions(c.from);$("cableTo").innerHTML=nodeOptions(c.to);$("cableFiberCount").value=c.fiber_count||12;$("cableLength").value=c.length_m||0;$("cableStatus").value=c.status||"ACTIVE";syncCablePorts();$("cableDialog").showModal()}
@@ -412,7 +459,9 @@ function renderCondition(){
   const bg=total?"conic-gradient(#18bd82 0 "+p1+"%,#1688ff "+p1+"% "+p2+"%,#ff9d2d "+p2+"% "+p3+"%,#ef4c58 "+p3+"% 100%)":"#18374f";
   $("coreCondition").innerHTML='<div class="donut" style="background:'+bg+'"><div><b>'+total+'</b><span>Total Core</span></div></div><div class="legend-list"><span><i class="green"></i>Core Terpakai <b>'+used+'%</b></span><span><i class="blue"></i>Core Tersedia <b>'+available+'%</b></span><span><i class="orange"></i>Cadangan <b>'+reserved+'%</b></span><span><i class="red"></i>Core Rusak <b>'+damaged+'%</b></span></div>';
   const customers=(db.assets||[]).filter(x=>x.type==="CUSTOMER"),active=customers.filter(x=>x.status==="ACTIVE").length;
-  $("serviceStatus").innerHTML='<div class="service"><span>🟢 Pelanggan Aktif</span><b>'+active+'</b></div><div class="service"><span>🔴 Pelanggan Nonaktif</span><b>'+(customers.length-active)+'</b></div><div class="service"><span>⚠ Gangguan Aktif</span><b>0</b></div><div class="service"><span>🔧 Work Order Open</span><b>0</b></div>';
+  const incidents=db.incidents||[],openIncidents=incidents.filter(x=>x.status==="OPEN"||x.status==="IN_PROGRESS").length;
+  const workOrders=db.workOrders||[],openWorkOrders=workOrders.filter(x=>x.status!=="DONE"&&x.status!=="CANCELLED").length;
+  $("serviceStatus").innerHTML='<div class="service"><span>🟢 Pelanggan Aktif</span><b>'+active+'</b></div><div class="service"><span>🔴 Pelanggan Nonaktif</span><b>'+(customers.length-active)+'</b></div><div class="service"><span>⚠ Gangguan Aktif</span><b>'+openIncidents+'</b></div><div class="service"><span>🔧 Work Order Open</span><b>'+openWorkOrders+'</b></div>';
 }
 function renderAssets(){const q=$("search").value.toLowerCase();const a=db.assets.filter(x=>(x.code+" "+x.name+" "+x.type).toLowerCase().includes(q));$("assets").innerHTML=a.map(x=>'<div class="row"><div><b>'+esc(x.code)+'</b><div class="muted">'+esc(typeLabel(x.type))+' · '+esc(x.name)+'</div></div><span class="badge">'+esc(x.status)+'</span><div><button data-edit="'+esc(x.id)+'">Edit</button> <button class="danger" data-del="'+esc(x.id)+'">Hapus</button></div></div>').join("")||'<p class="muted">Tidak ada asset.</p>'}
 function renderCustomers(){const html=db.assets.filter(x=>x.type==="CUSTOMER").map(x=>'<option value="'+esc(x.id)+'">'+esc(x.code)+' — '+esc(x.name)+'</option>').join("");$("customerSelect").innerHTML=html;$("optCustomer").innerHTML='<option value="">— Pilih customer route —</option>'+html}
